@@ -223,7 +223,7 @@ export default function ProductForm() {
   return (
     <div className="max-w-3xl mx-auto bg-white min-h-screen">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-white border-b">
+      <div className="sticky top-0 z-50 bg-white">
         <div className="p-4">
           <button 
             onClick={() => router.back()} 
