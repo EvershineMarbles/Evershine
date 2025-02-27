@@ -528,14 +528,6 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
                   mode === 'edit' ? 'Update Product' : 'Save Product'
                 )}
               </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full border-[#e3e3e3] text-[#181818] font-medium h-12 rounded-[20px] hover:bg-gray-50"
-                onClick={() => router.back()}
-              >
-                Cancel
-              </Button>
             </div>
 
             {/* Message Display */}

@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Download } from 'lucide-react'
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
+import { QRCodeSVG } from 'qrcode.react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -36,6 +37,7 @@ export default function ProductDetail() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedThumbnail, setSelectedThumbnail] = useState(0)
   const [imageLoadError, setImageLoadError] = useState<boolean[]>([])
+  const qrRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -53,7 +55,6 @@ export default function ProductDetail() {
 
         if (response.data.success && response.data.data?.[0]) {
           setProduct(response.data.data[0])
-          // Initialize image load error array
           setImageLoadError(new Array(response.data.data[0].image.length).fill(false))
         } else {
           throw new Error(response.data.msg || "No data found")
@@ -88,6 +89,52 @@ export default function ProductDetail() {
       newErrors[index] = true
       return newErrors
     })
+  }
+
+  const nextImage = () => {
+    if (product) {
+      setCurrentImageIndex((prev) => 
+        prev === product.image.length - 1 ? 0 : prev + 1
+      )
+    }
+  }
+
+  const previousImage = () => {
+    if (product) {
+      setCurrentImageIndex((prev) => 
+        prev === 0 ? product.image.length - 1 : prev - 1
+      )
+    }
+  }
+
+  const downloadQRCode = () => {
+    if (!qrRef.current) return
+
+    const canvas = document.createElement("canvas")
+    const svg = qrRef.current.querySelector("svg")
+    if (!svg) return
+
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const img = new Image()
+    img.onload = () => {
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return
+      
+      // Set background to white
+      ctx.fillStyle = "white"
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      
+      ctx.drawImage(img, 0, 0)
+      
+      const pngFile = canvas.toDataURL("image/png")
+      const downloadLink = document.createElement("a")
+      downloadLink.download = `${product?.name || 'product'}-qr.png`
+      downloadLink.href = pngFile
+      downloadLink.click()
+    }
+    img.src = 'data:image/svg+xml;base64,' + btoa(svgData)
   }
 
   if (loading) {
@@ -134,7 +181,7 @@ export default function ProductDetail() {
           {/* Images Section */}
           <div className="w-full md:w-1/2 md:order-2 mb-8 md:mb-0">
             {/* Main Image */}
-            <div className="relative rounded-2xl overflow-hidden bg-gray-100 mb-4">
+            <div className="relative rounded-2xl overflow-hidden bg-gray-100 mb-4 group">
               <div className="aspect-[4/3] relative">
                 <Image
                   src={imageLoadError[currentImageIndex] ? "/placeholder.svg" : (product.image[currentImageIndex] || "/placeholder.svg")}
@@ -144,6 +191,26 @@ export default function ProductDetail() {
                   onError={() => handleImageError(currentImageIndex)}
                   priority
                 />
+                
+                {/* Navigation Arrows */}
+                {product.image.length > 1 && (
+                  <>
+                    <button
+                      onClick={previousImage}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Previous image"
+                    >
+                      <ChevronLeft className="h-6 w-6 text-gray-800" />
+                    </button>
+                    <button
+                      onClick={nextImage}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Next image"
+                    >
+                      <ChevronRight className="h-6 w-6 text-gray-800" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
             
@@ -191,6 +258,26 @@ export default function ProductDetail() {
                 )}
               </div>
             ))}
+
+            {/* QR Code Section */}
+            <div className="flex flex-col items-center space-y-4 pt-4">
+              <div ref={qrRef} className="bg-white p-4 rounded-xl">
+                <QRCodeSVG
+                  value={`${window.location.origin}/product/${product.postId}`}
+                  size={150}
+                  level="H"
+                  includeMargin
+                />
+              </div>
+              <Button
+                onClick={downloadQRCode}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download QR Code
+              </Button>
+            </div>
 
             {/* Edit Button */}
             <Button 
