@@ -235,7 +235,7 @@ export default function ProductForm() {
           
           <div className="text-center mt-4 mb-6">
             <h1 className="text-3xl font-bold text-[#181818]">Add New Product</h1>
-            <p className="text-[#616467] text-sm mt-1">Enter All Product Details</p>
+            <p className="text-[#616467] text-sm mt-1.2">Enter All Product Details</p>
           </div>
         </div>
       </div>
