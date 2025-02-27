@@ -5,6 +5,7 @@ import axios from "axios"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Search, Pencil, ArrowLeft } from 'lucide-react'
+import Image from 'next/image'
 
 interface Product {
   _id: string
@@ -12,13 +13,17 @@ interface Product {
   price: number
   image: string[]
   postId: string
+  status?: 'draft' | 'pending' | 'approved'
 }
+
+type TabType = 'all' | 'pending' | 'approved' | 'draft'
 
 export default function Products() {
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState("draft")
+  const [activeTab, setActiveTab] = useState<TabType>("draft")
+  const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
     fetchProducts()
@@ -26,15 +31,29 @@ export default function Products() {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/api/getAllProducts")
+      const response = await axios.get<{
+        success: boolean
+        data: Product[]
+      }>("http://localhost:8000/api/getAllProducts")
+      
       if (response.data.success) {
         setProducts(response.data.data)
       }
     } catch (error) {
-      console.error("Error fetching products:", error)
+      console.error("Error fetching products:", error instanceof Error ? error.message : 'Failed to fetch products')
     } finally {
       setLoading(false)
     }
+  }
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesTab = activeTab === 'all' || product.status === activeTab
+    return matchesSearch && matchesTab
+  })
+
+  const handleTabClick = (tab: TabType) => {
+    setActiveTab(tab)
   }
 
   if (loading) {
@@ -72,6 +91,8 @@ export default function Products() {
               <input
                 type="text"
                 placeholder="Search Product..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-3 w-full md:w-[300px] rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#194a95] focus:border-transparent"
               />
             </div>
@@ -81,42 +102,19 @@ export default function Products() {
         {/* Filter Tabs and Add Button */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div className="flex flex-wrap gap-2">
-            <button 
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                activeTab === "all" 
-                  ? "bg-[#194a95] text-white" 
-                  : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              All
-            </button>
-            <button 
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                activeTab === "pending" 
-                  ? "bg-[#194a95] text-white" 
-                  : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              Pending approval
-            </button>
-            <button 
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                activeTab === "approved" 
-                  ? "bg-[#194a95] text-white" 
-                  : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              Approved
-            </button>
-            <button 
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                activeTab === "draft" 
-                  ? "bg-[#194a95] text-white" 
-                  : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              In Draft
-            </button>
+            {(['all', 'pending', 'approved', 'draft'] as const).map((tab) => (
+              <button 
+                key={tab}
+                onClick={() => handleTabClick(tab)}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  activeTab === tab 
+                    ? "bg-[#194a95] text-white" 
+                    : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
           </div>
           <button 
             onClick={() => router.push('/add-product')}
@@ -129,24 +127,25 @@ export default function Products() {
 
         {/* Products Count */}
         <p className="text-gray-600 mb-6">
-          Showing 1-25 of {products.length} products
+          Showing 1-{Math.min(25, filteredProducts.length)} of {filteredProducts.length} products
         </p>
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 mb-8">
-          {products.map((product) => (
+          {filteredProducts.map((product) => (
             <div key={product._id} className="group relative bg-white rounded-2xl overflow-hidden border border-gray-200/80 hover:border-gray-300/80 transition-colors">
               <Link 
                 href={`/product/${product.postId}`}
                 className="block"
               >
                 <div className="p-3">
-                  <div className="w-full overflow-hidden rounded-xl bg-gray-50
+                  <div className="relative w-full overflow-hidden rounded-xl bg-gray-50
                               aspect-[4/3] sm:aspect-[4/3] md:aspect-[4/3] lg:aspect-square">
-                    <img
+                    <Image
                       src={product.image[0] || "/placeholder.svg"}
                       alt={product.name}
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
+                      fill
+                      className="object-cover transition-transform group-hover:scale-105 duration-300"
                     />
                   </div>
                 </div>

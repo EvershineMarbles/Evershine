@@ -6,8 +6,9 @@ import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { ArrowLeft, Plus, Loader2, Download, X } from 'lucide-react'
 import { useRouter } from "next/navigation"
-import axios from "axios"
+import axios, { AxiosError } from "axios"
 import QRCode from "qrcode"
+import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -31,6 +32,30 @@ const CATEGORIES = [
 
 const APPLICATION_AREAS = ["Flooring", "Countertops", "Walls", "Exterior", "Interior"] as const
 
+type Category = typeof CATEGORIES[number]
+type ApplicationArea = typeof APPLICATION_AREAS[number]
+
+interface MessageState {
+  text: string
+  type: 'error' | 'success'
+}
+
+interface FormValues extends z.infer<typeof formSchema> {
+  images?: FileList
+}
+
+interface ApiResponse {
+  success: boolean
+  msg?: string
+  data?: {
+    postId: string
+    [key: string]: any
+  }
+}
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+
 const formSchema = z.object({
   name: z.string().min(2, "Product name must be at least 2 characters"),
   category: z.string().min(1, "Please select a category"),
@@ -45,7 +70,7 @@ export default function ProductForm() {
   const [images, setImages] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState("")
+  const [message, setMessage] = useState<MessageState | null>(null)
   const [postId, setPostId] = useState<string | null>(null)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
 
@@ -61,19 +86,38 @@ export default function ProductForm() {
     },
   })
 
+  const validateImage = (file: File): boolean => {
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setMessage({ text: "Invalid file type. Only JPG, PNG and WebP are allowed", type: 'error' })
+      return false
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setMessage({ text: "File size too large. Maximum size is 5MB", type: 'error' })
+      return false
+    }
+
+    return true
+  }
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const fileArray = Array.from(e.target.files)
+      
       if (fileArray.length > 4) {
-        alert("You can only upload up to 4 images")
+        setMessage({ text: "You can only upload up to 4 images", type: 'error' })
         return
       }
-      setImages(fileArray)
+
+      // Validate each file
+      const validFiles = fileArray.filter(validateImage)
+      if (validFiles.length !== fileArray.length) return
+
+      setImages(validFiles)
 
       // Create preview URLs
-      const newPreviews = fileArray.map((file) => URL.createObjectURL(file))
+      const newPreviews = validFiles.map((file) => URL.createObjectURL(file))
       setPreviews((prev) => {
-        // Clean up old preview URLs
         prev.forEach((url) => URL.revokeObjectURL(url))
         return newPreviews
       })
@@ -83,16 +127,15 @@ export default function ProductForm() {
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index))
     setPreviews((prev) => {
-      const newPreviews = prev.filter((_, i) => i !== index)
       URL.revokeObjectURL(prev[index])
-      return newPreviews
+      return prev.filter((_, i) => i !== index)
     })
   }
 
-  const generateQRCode = async (postId: string) => {
+  const generateQRCode = async (postId: string): Promise<string> => {
     try {
       const url = `${window.location.origin}/product/${postId}`
-      const qrCodeDataUrl = await QRCode.toDataURL(url, {
+      return await QRCode.toDataURL(url, {
         width: 200,
         margin: 2,
         color: {
@@ -100,71 +143,75 @@ export default function ProductForm() {
           light: "#ffffff",
         },
       })
-      setQrCodeUrl(qrCodeDataUrl)
     } catch (error) {
       console.error("Error generating QR code:", error)
+      throw new Error("Failed to generate QR code")
     }
   }
 
   const handleDownloadQR = () => {
-    if (qrCodeUrl) {
-      const link = document.createElement("a")
-      link.href = qrCodeUrl
-      link.download = `product-qr-${postId}.png`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-    }
+    if (!qrCodeUrl || !postId) return
+    
+    const link = document.createElement("a")
+    link.href = qrCodeUrl
+    link.download = `product-qr-${postId}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
-    setLoading(true)
-    setMessage("")
-    setPostId(null)
-    setQrCodeUrl("")
-
     try {
-      // Validate images
+      setLoading(true)
+      setMessage(null)
+      setPostId(null)
+      setQrCodeUrl("")
+
       if (images.length === 0) {
         throw new Error("You must upload at least one image")
       }
 
       const formData = new FormData()
 
-      // Append form fields
       Object.entries(values).forEach(([key, value]) => {
-        formData.append(key, value.toString())
+        if (value) formData.append(key, value.toString())
       })
 
-      // Append images
       images.forEach((image) => {
         formData.append("images", image)
       })
 
-      const response = await axios.post("http://localhost:8000/api/create-post", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      })
-
-      if (response.data.success) {
-        setMessage("Product created successfully!")
-
-        if (response.data.data?.postId) {
-          const newPostId = response.data.data.postId
-          setPostId(newPostId)
-          await generateQRCode(newPostId)
+      const response = await axios.post<ApiResponse>(
+        "http://localhost:8000/api/create-post",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
         }
+      )
 
-        // Reset form
+      if (response.data.success && response.data.data?.postId) {
+        const newPostId = response.data.data.postId
+        setPostId(newPostId)
+        const qrCode = await generateQRCode(newPostId)
+        setQrCodeUrl(qrCode)
+        setMessage({ text: "Product created successfully!", type: 'success' })
+        
         form.reset()
         setImages([])
         setPreviews([])
       } else {
         throw new Error(response.data.msg || "Failed to create product")
       }
-    } catch (error: any) {
-      setMessage(error.message || "Error creating product")
+    } catch (error) {
+      let errorMessage = "Error creating product"
+      
+      if (error instanceof AxiosError) {
+        errorMessage = error.response?.data?.msg || error.message
+      } else if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      
+      setMessage({ text: errorMessage, type: 'error' })
       console.error("Error:", error)
     } finally {
       setLoading(false)
@@ -174,7 +221,7 @@ export default function ProductForm() {
   return (
     <div className="max-w-3xl mx-auto bg-white min-h-screen">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-white">
+      <div className="sticky top-0 z-50 bg-white border-b">
         <div className="p-4">
           <button 
             onClick={() => router.back()} 
@@ -314,10 +361,12 @@ export default function ProductForm() {
                   <div className="flex gap-4 flex-wrap flex-1">
                     {previews.map((preview, index) => (
                       <div key={index} className="relative w-[100px] aspect-square">
-                        <img
+                        <Image
                           src={preview || "/placeholder.svg"}
                           alt={`Preview ${index + 1}`}
-                          className="w-full h-full object-cover rounded-md"
+                          width={100}
+                          height={100}
+                          className="rounded-md object-cover"
                         />
                         <button
                           type="button"
@@ -389,14 +438,20 @@ export default function ProductForm() {
                   </FormItem>
                 )}
               />
-</div>
+            </div>
 
             {/* Success State with QR Code */}
             {postId && qrCodeUrl && (
               <Card className="p-6 text-center space-y-4 border-green-200 bg-green-50">
                 <h3 className="text-lg font-semibold text-green-600">Product Created Successfully!</h3>
                 <div className="flex justify-center">
-                  <img src={qrCodeUrl || "/placeholder.svg"} alt="Product QR Code" className="w-48 h-48" />
+                  <Image
+                    src={qrCodeUrl || "/placeholder.svg"}
+                    alt="Product QR Code"
+                    width={192}
+                    height={192}
+                    className="w-48 h-48"
+                  />
                 </div>
                 <Button
                   type="button"
@@ -436,9 +491,12 @@ export default function ProductForm() {
               </Button>
             </div>
 
+            {/* Message Display */}
             {message && !qrCodeUrl && (
-              <div className="text-center mt-4 text-red-500">
-                {message}
+              <div className={`text-center mt-4 ${
+                message.type === 'error' ? 'text-red-500' : 'text-green-500'
+              }`}>
+                {message.text}
               </div>
             )}
           </form>

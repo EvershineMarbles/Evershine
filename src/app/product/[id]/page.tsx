@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import axios from "axios"
+import axios, { AxiosError } from "axios"
 import { ArrowLeft } from 'lucide-react'
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 
 interface Product {
@@ -18,44 +19,73 @@ interface Product {
   quantityAvailable: number
 }
 
+interface ApiResponse {
+  success: boolean
+  data?: Product[]
+  msg?: string
+}
+
 export default function ProductDetail() {
   const params = useParams()
   const router = useRouter()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string>("")
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedThumbnail, setSelectedThumbnail] = useState(0)
+  const [imageLoadError, setImageLoadError] = useState<boolean[]>([])
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         setLoading(true)
-        const response = await axios.get(`http://localhost:8000/api/getPostDataById`, {
+        setError("")
+
+        if (!params.id) {
+          throw new Error("Product ID is missing")
+        }
+
+        const response = await axios.get<ApiResponse>(`http://localhost:8000/api/getPostDataById`, {
           params: { id: params.id }
         })
 
-        if (response.data.success && response.data.data?.length > 0) {
+        if (response.data.success && response.data.data?.[0]) {
           setProduct(response.data.data[0])
+          // Initialize image load error array
+          setImageLoadError(new Array(response.data.data[0].image.length).fill(false))
         } else {
-          setError("No data found")
+          throw new Error(response.data.msg || "No data found")
         }
-      } catch (error: any) {
+      } catch (error) {
+        let errorMessage = "Error fetching product"
+        
+        if (error instanceof AxiosError) {
+          errorMessage = error.response?.data?.msg || error.message
+        } else if (error instanceof Error) {
+          errorMessage = error.message
+        }
+        
         console.error("Error fetching product:", error)
-        setError(error.message || "Error fetching product")
+        setError(errorMessage)
       } finally {
         setLoading(false)
       }
     }
 
-    if (params.id) {
-      fetchProduct()
-    }
+    fetchProduct()
   }, [params.id])
 
   const handleThumbnailClick = (index: number) => {
     setCurrentImageIndex(index)
     setSelectedThumbnail(index)
+  }
+
+  const handleImageError = (index: number) => {
+    setImageLoadError(prev => {
+      const newErrors = [...prev]
+      newErrors[index] = true
+      return newErrors
+    })
   }
 
   if (loading) {
@@ -70,7 +100,9 @@ export default function ProductDetail() {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-md p-6 text-center space-y-2">
-          <h2 className="text-xl font-medium text-gray-900">No data found</h2>
+          <h2 className="text-xl font-medium text-gray-900">
+            {error || "No data found"}
+          </h2>
           <p className="text-sm text-gray-500">Product ID: {params.id}</p>
           <Button 
             onClick={() => router.push("/")}
@@ -89,23 +121,28 @@ export default function ProductDetail() {
       {/* Back Button */}
       <button 
         onClick={() => router.back()} 
-        className="mb-6"
+        className="mb-6 hover:bg-gray-100 p-2 rounded-full transition-colors"
         aria-label="Go back"
       >
-        <ArrowLeft className="h-8 w-8" />
+        <ArrowLeft className="h-6 w-6" />
       </button>
 
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row md:gap-12">
-          {/* Images Section - First on mobile, Right on desktop */}
+          {/* Images Section */}
           <div className="w-full md:w-1/2 md:order-2 mb-8 md:mb-0">
             {/* Main Image */}
-            <div className="rounded-2xl overflow-hidden bg-gray-100 mb-4">
-              <img
-                src={product.image[currentImageIndex] || "/placeholder.svg"}
-                alt={product.name}
-                className="w-full aspect-[4/3] object-cover"
-              />
+            <div className="relative rounded-2xl overflow-hidden bg-gray-100 mb-4">
+              <div className="aspect-[4/3] relative">
+                <Image
+                  src={imageLoadError[currentImageIndex] ? "/placeholder.svg" : (product.image[currentImageIndex] || "/placeholder.svg")}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                  onError={() => handleImageError(currentImageIndex)}
+                  priority
+                />
+              </div>
             </div>
             
             {/* Thumbnails */}
@@ -119,10 +156,12 @@ export default function ProductDetail() {
                       selectedThumbnail === index ? "ring-2 ring-[#194a95]" : ""
                     }`}
                   >
-                    <img
-                      src={img || "/placeholder.svg"}
+                    <Image
+                      src={imageLoadError[index] ? "/placeholder.svg" : (img || "/placeholder.svg")}
                       alt={`${product.name} thumbnail ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      onError={() => handleImageError(index)}
                     />
                   </button>
                 ))}
@@ -130,59 +169,26 @@ export default function ProductDetail() {
             )}
           </div>
 
-          {/* Product Details - Second on mobile, Left on desktop */}
-          <div className="w-full md:w-1/2 md:order-1">
-            {/* Product Name */}
-            <div className="mb-6">
-              <p className="text-gray-500">Product Name</p>
-              <h1 className="text-3xl font-bold">{product.name}</h1>
-              <div className="h-px bg-gray-200 w-full mt-4"></div>
-            </div>
-
-            {/* Price */}
-            <div className="mb-6">
-              <div className="flex justify-between items-baseline">
-                <p className="text-gray-500">Price (per sqft)</p>
-                <p className="text-xl font-bold">₹{product.price}/per sqft</p>
+          {/* Product Details */}
+          <div className="w-full md:w-1/2 md:order-1 space-y-6">
+            {/* Product Info Sections */}
+            {[
+              { label: "Product Name", value: product.name, isTitle: true },
+              { label: "Price (per sqft)", value: `₹${product.price}/per sqft` },
+              { label: "Product Category", value: product.category },
+              { label: "Quality Available (in sqft)", value: product.quantityAvailable },
+              { label: "Application Areas", value: product.applicationAreas },
+              { label: "About Product", value: product.description || "Product mainly used for countertop" }
+            ].map((item, index) => (
+              <div key={index} className="pb-4 border-b border-gray-200">
+                <p className="text-gray-500">{item.label}</p>
+                {item.isTitle ? (
+                  <h1 className="text-3xl font-bold mt-1">{item.value}</h1>
+                ) : (
+                  <p className="text-xl font-bold mt-1">{item.value}</p>
+                )}
               </div>
-              <div className="h-px bg-gray-200 w-full mt-4"></div>
-            </div>
-
-            {/* Category */}
-            <div className="mb-6">
-              <div className="flex justify-between items-baseline">
-                <p className="text-gray-500">Product Category</p>
-                <p className="text-xl font-bold">{product.category}</p>
-              </div>
-              <div className="h-px bg-gray-200 w-full mt-4"></div>
-            </div>
-
-            {/* Quality Available */}
-            <div className="mb-6">
-              <div className="flex justify-between items-baseline">
-                <p className="text-gray-500">Quality Available (in sqft)</p>
-                <p className="text-xl font-bold">{product.quantityAvailable}</p>
-              </div>
-              <div className="h-px bg-gray-200 w-full mt-4"></div>
-            </div>
-
-            {/* Application Areas */}
-            <div className="mb-6">
-              <div className="flex justify-between items-baseline">
-                <p className="text-gray-500">Application Areas</p>
-                <p className="text-xl font-bold">{product.applicationAreas}</p>
-              </div>
-              <div className="h-px bg-gray-200 w-full mt-4"></div>
-            </div>
-
-            {/* About Product */}
-            <div className="mb-6">
-              <div className="flex justify-between items-baseline">
-                <p className="text-gray-500">About Product</p>
-                <p className="text-xl font-bold">{product.description || "Product mainly used for countertop"}</p>
-              </div>
-              <div className="h-px bg-gray-200 w-full mt-4"></div>
-            </div>
+            ))}
 
             {/* Edit Button */}
             <Button 
