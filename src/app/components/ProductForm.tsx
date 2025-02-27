@@ -127,8 +127,8 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
     if (e.target.files) {
       const fileArray = Array.from(e.target.files)
       
-      if (fileArray.length > 10) {
-        setMessage({ text: "You can only upload up to 10 images", type: 'error' })
+      if (fileArray.length > 4) {
+        setMessage({ text: "You can only upload up to 4 images", type: 'error' })
         return
       }
 
