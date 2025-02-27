@@ -5,7 +5,9 @@ import axios from "axios"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Search, Pencil, ArrowLeft } from 'lucide-react'
-import Image from 'next/image'
+import Image from "next/image"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 interface Product {
   _id: string
@@ -16,14 +18,13 @@ interface Product {
   status?: 'draft' | 'pending' | 'approved'
 }
 
-type TabType = 'all' | 'pending' | 'approved' | 'draft'
-
 export default function Products() {
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<TabType>("draft")
-  const [searchTerm, setSearchTerm] = useState("")
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'draft'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [imageError, setImageError] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     fetchProducts()
@@ -31,29 +32,26 @@ export default function Products() {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get<{
-        success: boolean
-        data: Product[]
-      }>("http://localhost:8000/api/getAllProducts")
-      
+      setLoading(true)
+      const response = await axios.get(`${API_URL}/api/getAllProducts`)
       if (response.data.success) {
         setProducts(response.data.data)
       }
     } catch (error) {
-      console.error("Error fetching products:", error instanceof Error ? error.message : 'Failed to fetch products')
+      console.error("Error fetching products:", error)
     } finally {
       setLoading(false)
     }
   }
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesTab = activeTab === 'all' || product.status === activeTab
     return matchesSearch && matchesTab
   })
 
-  const handleTabClick = (tab: TabType) => {
-    setActiveTab(tab)
+  const handleImageError = (productId: string) => {
+    setImageError(prev => ({ ...prev, [productId]: true }))
   }
 
   if (loading) {
@@ -91,8 +89,8 @@ export default function Products() {
               <input
                 type="text"
                 placeholder="Search Product..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 pr-4 py-3 w-full md:w-[300px] rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#194a95] focus:border-transparent"
               />
             </div>
@@ -105,7 +103,7 @@ export default function Products() {
             {(['all', 'pending', 'approved', 'draft'] as const).map((tab) => (
               <button 
                 key={tab}
-                onClick={() => handleTabClick(tab)}
+                onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   activeTab === tab 
                     ? "bg-[#194a95] text-white" 
@@ -127,7 +125,7 @@ export default function Products() {
 
         {/* Products Count */}
         <p className="text-gray-600 mb-6">
-          Showing 1-{Math.min(25, filteredProducts.length)} of {filteredProducts.length} products
+          Showing {filteredProducts.length} of {products.length} products
         </p>
 
         {/* Products Grid */}
@@ -142,10 +140,11 @@ export default function Products() {
                   <div className="relative w-full overflow-hidden rounded-xl bg-gray-50
                               aspect-[4/3] sm:aspect-[4/3] md:aspect-[4/3] lg:aspect-square">
                     <Image
-                      src={product.image[0] || "/placeholder.svg"}
+                      src={imageError[product._id] ? "/placeholder.svg" : (product.image[0] || "/placeholder.svg")}
                       alt={product.name}
                       fill
                       className="object-cover transition-transform group-hover:scale-105 duration-300"
+                      onError={() => handleImageError(product._id)}
                     />
                   </div>
                 </div>
@@ -167,21 +166,39 @@ export default function Products() {
                     </div>
                   </div>
                   <p className="text-gray-600 mt-0.5">Rs. {product.price}/per sqft</p>
+                  {product.status && (
+                    <span className={`inline-block mt-2 px-2 py-1 rounded-full text-xs ${
+                      product.status === 'approved' ? 'bg-green-100 text-green-800' :
+                      product.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
+                    </span>
+                  )}
                 </div>
               </Link>
             </div>
           ))}
         </div>
 
+        {/* Empty State */}
+        {filteredProducts.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">No products found</p>
+          </div>
+        )}
+
         {/* Pagination */}
-        <div className="flex justify-end gap-4 mt-8">
-          <button className="px-6 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors w-32">
-            Previous
-          </button>
-          <button className="px-6 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors w-32">
-            Next
-          </button>
-        </div>
+        {filteredProducts.length > 0 && (
+          <div className="flex justify-end gap-4 mt-8">
+            <button className="px-6 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors w-32">
+              Previous
+            </button>
+            <button className="px-6 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors w-32">
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -4,7 +4,7 @@ import { useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { ArrowLeft, Plus, Loader2, Download, X } from 'lucide-react'
+import { Plus, Loader2, Download, X } from 'lucide-react'
 import { useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
 import QRCode from "qrcode"
@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card } from "@/components/ui/card"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 const CATEGORIES = [
   "Imported Marble",
@@ -182,7 +184,7 @@ export default function ProductForm() {
       })
 
       const response = await axios.post<ApiResponse>(
-        "http://localhost:8000/api/create-post",
+        `${API_URL}/api/create-post`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -220,25 +222,6 @@ export default function ProductForm() {
 
   return (
     <div className="max-w-3xl mx-auto bg-white min-h-screen">
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-white border-b">
-        <div className="p-4">
-          <button 
-            onClick={() => router.back()} 
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="h-6 w-6" />
-          </button>
-          
-          <div className="text-center mt-4 mb-6">
-            <h1 className="text-3xl font-bold text-[#181818]">Add New Product</h1>
-            <p className="text-[#616467] text-sm mt-1">Enter All Product Details</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Form */}
       <div className="px-6 pb-10">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">

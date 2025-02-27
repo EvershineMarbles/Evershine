@@ -7,6 +7,8 @@ import { ArrowLeft } from 'lucide-react'
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 interface Product {
   _id: string
   name: string
@@ -45,7 +47,7 @@ export default function ProductDetail() {
           throw new Error("Product ID is missing")
         }
 
-        const response = await axios.get<ApiResponse>(`http://localhost:8000/api/getPostDataById`, {
+        const response = await axios.get<ApiResponse>(`${API_URL}/api/getPostDataById`, {
           params: { id: params.id }
         })
 
