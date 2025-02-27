@@ -1,12 +1,10 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { ArrowLeft, Plus, Loader2, Download, X } from "lucide-react"
+import { ArrowLeft, Plus, Loader2, Download, X } from 'lucide-react'
 import { useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
 import QRCode from "qrcode"
@@ -19,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card } from "@/components/ui/card"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 const CATEGORIES = [
   "Imported Marble",
@@ -36,12 +34,12 @@ const CATEGORIES = [
 
 const APPLICATION_AREAS = ["Flooring", "Countertops", "Walls", "Exterior", "Interior"] as const
 
-type Category = (typeof CATEGORIES)[number]
-type ApplicationArea = (typeof APPLICATION_AREAS)[number]
+type Category = typeof CATEGORIES[number]
+type ApplicationArea = typeof APPLICATION_AREAS[number]
 
 interface MessageState {
   text: string
-  type: "error" | "success"
+  type: 'error' | 'success'
 }
 
 interface FormValues extends z.infer<typeof formSchema> {
@@ -58,7 +56,7 @@ interface ApiResponse {
 }
 
 interface ProductFormProps {
-  mode?: "create" | "edit"
+  mode?: 'create' | 'edit'
   initialData?: {
     _id: string
     postId: string
@@ -66,14 +64,13 @@ interface ProductFormProps {
     category: string
     price: string
     quantityAvailable: string
-    applicationAreas: string[]
+    applicationAreas: string
     description?: string
     image: string[]
   }
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
-const MAX_IMAGES = 10 // Updated to 10 images
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
 
 const formSchema = z.object({
@@ -81,11 +78,11 @@ const formSchema = z.object({
   category: z.string().min(1, "Please select a category"),
   price: z.string().min(1, "Price is required"),
   quantityAvailable: z.string().min(1, "Quantity is required"),
-  applicationAreas: z.array(z.string()).min(1, "Please select at least one application area"),
+  applicationAreas: z.string().min(1, "Please select an application area"),
   description: z.string().optional(),
 })
 
-export default function ProductForm({ mode = "create", initialData }: ProductFormProps) {
+export default function ProductForm({ mode = 'create', initialData }: ProductFormProps) {
   const router = useRouter()
   const [images, setImages] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
@@ -93,7 +90,6 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
   const [message, setMessage] = useState<MessageState | null>(null)
   const [postId, setPostId] = useState<string | null>(initialData?.postId || null)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
-  const [selectedAreas, setSelectedAreas] = useState<string[]>(initialData?.applicationAreas || [])
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -102,25 +98,25 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       category: initialData?.category || "",
       price: initialData?.price || "",
       quantityAvailable: initialData?.quantityAvailable || "",
-      applicationAreas: initialData?.applicationAreas || [],
+      applicationAreas: initialData?.applicationAreas || "",
       description: initialData?.description || "",
     },
   })
 
   useEffect(() => {
-    if (mode === "edit" && initialData?.image) {
+    if (mode === 'edit' && initialData?.image) {
       setPreviews(initialData.image)
     }
   }, [mode, initialData])
 
   const validateImage = (file: File): boolean => {
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      setMessage({ text: "Invalid file type. Only JPG, PNG and WebP are allowed", type: "error" })
+      setMessage({ text: "Invalid file type. Only JPG, PNG and WebP are allowed", type: 'error' })
       return false
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setMessage({ text: "File size too large. Maximum size is 5MB", type: "error" })
+      setMessage({ text: "File size too large. Maximum size is 5MB", type: 'error' })
       return false
     }
 
@@ -130,25 +126,27 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const fileArray = Array.from(e.target.files)
-      const totalImages = previews.length + fileArray.length
-
-      if (totalImages > MAX_IMAGES) {
-        setMessage({ text: `You can only upload up to ${MAX_IMAGES} images`, type: "error" })
+      
+      if (fileArray.length > 10) {
+        setMessage({ text: "You can only upload up to 10 images", type: 'error' })
         return
       }
 
       const validFiles = fileArray.filter(validateImage)
       if (validFiles.length !== fileArray.length) return
 
-      setImages((prev) => [...prev, ...validFiles])
+      setImages(validFiles)
 
       const newPreviews = validFiles.map((file) => URL.createObjectURL(file))
-      setPreviews((prev) => [...prev, ...newPreviews])
+      setPreviews((prev) => {
+        prev.forEach((url) => URL.revokeObjectURL(url))
+        return newPreviews
+      })
     }
   }
 
   const removeImage = (index: number) => {
-    if (mode === "edit" && initialData?.image) {
+    if (mode === 'edit' && initialData?.image) {
       const newPreviews = [...previews]
       newPreviews.splice(index, 1)
       setPreviews(newPreviews)
@@ -161,12 +159,32 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
     }
   }
 
-  const handleAreaToggle = (area: string) => {
-    setSelectedAreas((prev) => {
-      const newAreas = prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
-      form.setValue("applicationAreas", newAreas)
-      return newAreas
-    })
+  const generateQRCode = async (postId: string): Promise<string> => {
+    try {
+      const url = `${window.location.origin}/product/${postId}`
+      return await QRCode.toDataURL(url, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: "#000000",
+          light: "#ffffff",
+        },
+      })
+    } catch (error) {
+      console.error("Error generating QR code:", error)
+      throw new Error("Failed to generate QR code")
+    }
+  }
+
+  const handleDownloadQR = () => {
+    if (!qrCodeUrl || !postId) return
+    
+    const link = document.createElement("a")
+    link.href = qrCodeUrl
+    link.download = `product-qr-${postId}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -181,14 +199,11 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       const formData = new FormData()
 
       Object.entries(values).forEach(([key, value]) => {
-        if (key === "applicationAreas") {
-          formData.append(key, JSON.stringify(value))
-        } else if (value) {
-          formData.append(key, value.toString())
-        }
+        if (value) formData.append(key, value.toString())
       })
 
-      if (mode === "edit") {
+      // Handle images based on mode
+      if (mode === 'edit') {
         formData.append("existingImages", JSON.stringify(previews))
         if (images.length > 0) {
           images.forEach((image) => formData.append("newImages", image))
@@ -197,70 +212,54 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
         images.forEach((image) => formData.append("images", image))
       }
 
-      const endpoint =
-        mode === "edit" ? `${API_URL}/api/updateProduct/${initialData?.postId}` : `${API_URL}/api/create-post`
+      const endpoint = mode === 'edit' 
+        ? `${API_URL}/api/updateProduct/${initialData?.postId}`
+        : `${API_URL}/api/create-post`
 
-      const response = await axios.post<ApiResponse>(endpoint, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })
+      const response = await axios.post<ApiResponse>(
+        endpoint,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      )
 
       if (response.data.success) {
-        if (mode === "create" && response.data.data?.postId) {
+        if (mode === 'create' && response.data.data?.postId) {
           const newPostId = response.data.data.postId
           setPostId(newPostId)
           const qrCode = await generateQRCode(newPostId)
           setQrCodeUrl(qrCode)
         }
-
-        setMessage({
-          text: mode === "edit" ? "Product updated successfully!" : "Product created successfully!",
-          type: "success",
+        
+        setMessage({ 
+          text: mode === 'edit' ? "Product updated successfully!" : "Product created successfully!", 
+          type: 'success' 
         })
 
-        if (mode === "create") {
+        if (mode === 'create') {
           form.reset()
           setImages([])
           setPreviews([])
-          setSelectedAreas([])
         } else {
-          setTimeout(() => router.push("/products"), 1500)
+          setTimeout(() => router.push('/products'), 1500)
         }
       } else {
         throw new Error(response.data.msg || `Failed to ${mode} product`)
       }
     } catch (error) {
-      let errorMessage = `Error ${mode === "edit" ? "updating" : "creating"} product`
-
+      let errorMessage = `Error ${mode === 'edit' ? 'updating' : 'creating'} product`
+      
       if (error instanceof AxiosError) {
         errorMessage = error.response?.data?.msg || error.message
       } else if (error instanceof Error) {
         errorMessage = error.message
       }
-
-      setMessage({ text: errorMessage, type: "error" })
+      
+      setMessage({ text: errorMessage, type: 'error' })
       console.error("Error:", error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const generateQRCode = async (text: string) => {
-    try {
-      return await QRCode.toDataURL(text)
-    } catch (err) {
-      console.error(err)
-      return ""
-    }
-  }
-
-  const handleDownloadQR = () => {
-    if (qrCodeUrl) {
-      const link = document.createElement("a")
-      link.href = qrCodeUrl
-      link.download = "qrcode.png"
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
     }
   }
 
@@ -269,17 +268,17 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       {/* Header */}
       <div className="sticky top-0 z-50 bg-white">
         <div className="p-4">
-          <button
-            onClick={() => router.back()}
+          <button 
+            onClick={() => router.back()} 
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             aria-label="Go back"
           >
             <ArrowLeft className="h-6 w-6" />
           </button>
-
+          
           <div className="text-center mt-4 mb-6">
             <h1 className="text-3xl font-bold text-[#181818]">
-              {mode === "edit" ? "Edit Product" : "Add New Product"}
+              {mode === 'edit' ? 'Edit Product' : 'Add New Product'}
             </h1>
           </div>
         </div>
@@ -297,11 +296,13 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <Input
-                      className="rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95]"
-                      placeholder="Enter product name"
-                      {...field}
-                    />
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter product name" 
+                        className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]" 
+                        {...field} 
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -309,8 +310,8 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
             </div>
 
             {/* Category */}
-            <div className="form-field">
-              <FormLabel className="text-[#181818] font-bold block mb-2">Category</FormLabel>
+            <div className="form-field relative z-40">
+              <FormLabel className="text-[#181818] font-bold block mb-2">Select Product Category</FormLabel>
               <FormField
                 control={form.control}
                 name="category"
@@ -318,7 +319,9 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                   <FormItem>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95]">
+                        <SelectTrigger 
+                          className="rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95]"
+                        >
                           <SelectValue placeholder="Select a category" />
                         </SelectTrigger>
                       </FormControl>
@@ -328,7 +331,11 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                         sideOffset={5}
                       >
                         {CATEGORIES.map((category) => (
-                          <SelectItem key={category} value={category}>
+                          <SelectItem
+                            key={category}
+                            value={category}
+                            className="px-3 py-2 focus:bg-gray-100 cursor-pointer hover:bg-gray-50"
+                          >
                             {category}
                           </SelectItem>
                         ))}
@@ -340,60 +347,61 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
               />
             </div>
 
-            {/* Price */}
-            <div className="form-field">
-              <FormLabel className="text-[#181818] font-bold block mb-2">Price</FormLabel>
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <Input
-                      type="number"
-                      className="rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95]"
-                      placeholder="Enter price"
-                      {...field}
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Price and Quantity Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="form-field">
+                <FormLabel className="text-[#181818] font-bold block mb-2">Price (per sqft)</FormLabel>
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="per sqft" 
+                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            {/* Quantity Available */}
-            <div className="form-field">
-              <FormLabel className="text-[#181818] font-bold block mb-2">Quantity Available</FormLabel>
-              <FormField
-                control={form.control}
-                name="quantityAvailable"
-                render={({ field }) => (
-                  <FormItem>
-                    <Input
-                      type="number"
-                      className="rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95]"
-                      placeholder="Enter quantity available"
-                      {...field}
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="form-field">
+                <FormLabel className="text-[#181818] font-bold block mb-2">Quality Available (in sqft)</FormLabel>
+                <FormField
+                  control={form.control}
+                  name="quantityAvailable"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="in sqft" 
+                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             {/* Image Upload */}
             <div className="form-field">
-              <FormLabel className="text-[#181818] font-bold block mb-2">
-                Upload Product Images ({previews.length}/{MAX_IMAGES})
-              </FormLabel>
+              <FormLabel className="text-[#181818] font-bold block mb-2">Upload Product Images</FormLabel>
               <div className="flex gap-4 flex-wrap items-start">
-                {previews.length < MAX_IMAGES && (
-                  <label className="block border-2 border-[#383535] rounded-md w-full max-w-[100px] aspect-square cursor-pointer hover:border-[#194a95] transition-colors shrink-0">
-                    <div className="flex items-center justify-center h-full">
-                      <Plus className="w-8 h-8 text-[#383535]" />
-                    </div>
-                    <input type="file" onChange={handleImageChange} multiple accept="image/*" className="hidden" />
-                  </label>
-                )}
+                <label className="block border-2 border-[#383535] rounded-md w-full max-w-[100px] aspect-square cursor-pointer hover:border-[#194a95] transition-colors shrink-0">
+                  <div className="flex items-center justify-center h-full">
+                    <Plus className="w-8 h-8 text-[#383535]" />
+                  </div>
+                  <input type="file" onChange={handleImageChange} multiple accept="image/*" className="hidden" />
+                </label>
 
                 {previews.length > 0 && (
                   <div className="flex gap-4 flex-wrap flex-1">
@@ -420,28 +428,42 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
               </div>
             </div>
 
-            {/* Application Areas Multi-Select */}
+            {/* Application Areas */}
             <div className="form-field relative z-30">
               <FormLabel className="text-[#181818] font-bold block mb-2">Application Areas</FormLabel>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {APPLICATION_AREAS.map((area) => (
-                  <button
-                    key={area}
-                    type="button"
-                    onClick={() => handleAreaToggle(area)}
-                    className={`p-3 rounded-lg border-2 transition-colors ${
-                      selectedAreas.includes(area)
-                        ? "border-[#194a95] bg-[#194a95]/10 text-[#194a95]"
-                        : "border-gray-200 hover:border-[#194a95]/50"
-                    }`}
-                  >
-                    {area}
-                  </button>
-                ))}
-              </div>
-              {form.formState.errors.applicationAreas && (
-                <p className="text-sm text-red-500 mt-2">{form.formState.errors.applicationAreas.message}</p>
-              )}
+              <FormField
+                control={form.control}
+                name="applicationAreas"
+                render={({ field }) => (
+                  <FormItem>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger 
+                          className="rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95]"
+                        >
+                          <SelectValue placeholder="Select application area" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent
+                        className="bg-white border rounded-md shadow-lg z-50"
+                        position="popper"
+                        sideOffset={5}
+                      >
+                        {APPLICATION_AREAS.map((area) => (
+                          <SelectItem
+                            key={area}
+                            value={area}
+                            className="px-3 py-2 focus:bg-gray-100 cursor-pointer hover:bg-gray-50"
+                          >
+                            {area}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* Description */}
@@ -452,16 +474,43 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <Textarea
-                      className="rounded-md border-[#e3e3e3] h-24 focus:ring-[#194a95]"
-                      placeholder="Enter product description"
-                      {...field}
-                    />
-                    <FormMessage />
+                    <FormControl>
+                      <Textarea
+                        placeholder="Type your description here (optional)"
+                        className="min-h-[150px] rounded-md border-[#e3e3e3] focus-visible:ring-[#194a95]"
+                        {...field}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />
             </div>
+
+            {/* Success State with QR Code */}
+            {postId && qrCodeUrl && mode === 'create' && (
+              <Card className="p-6 text-center space-y-4 border-green-200 bg-green-50">
+                <h3 className="text-lg font-semibold text-green-600">Product Created Successfully!</h3>
+                <div className="flex justify-center">
+                  <Image
+                    src={qrCodeUrl || "/placeholder.svg"}
+                    alt="Product QR Code"
+                    width={192}
+                    height={192}
+                    className="w-48 h-48"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleDownloadQR}
+                  className="bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-full"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download QR Code
+                </Button>
+                <p className="text-sm text-gray-500">Scan this QR code to view the product details</p>
+                <p className="text-sm font-medium">Product ID: {postId}</p>
+              </Card>
+            )}
 
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-4 pt-4">
@@ -473,52 +522,20 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {mode === "edit" ? "Updating..." : "Saving..."}
+                    {mode === 'edit' ? 'Updating...' : 'Saving...'}
                   </>
-                ) : mode === "edit" ? (
-                  "Update Product"
                 ) : (
-                  "Save Product"
+                  mode === 'edit' ? 'Update Product' : 'Save Product'
                 )}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push("/products")}
-                className="w-full border-gray-200 text-gray-700 hover:bg-gray-50 font-medium h-12 rounded-[20px]"
-              >
-                Cancel
               </Button>
             </div>
 
-            {message && (
-              <Card
-                className={`p-4 mt-4 ${message.type === "error" ? "bg-red-100 border-red-500 text-red-700" : "bg-green-100 border-green-500 text-green-700"}`}
-              >
+            {/* Message Display */}
+            {message && (mode === 'edit' || !qrCodeUrl) && (
+              <div className={`text-center mt-4 ${
+                message.type === 'error' ? 'text-red-500' : 'text-green-500'
+              }`}>
                 {message.text}
-              </Card>
-            )}
-
-            {mode === "create" && postId && qrCodeUrl && (
-              <div className="mt-6 p-4 border rounded-md">
-                <h2 className="text-lg font-semibold mb-2">QR Code</h2>
-                <Image
-                  src={qrCodeUrl || "/placeholder.svg"}
-                  alt="QR Code"
-                  width={128}
-                  height={128}
-                  className="mx-auto mb-4"
-                />
-                <div className="flex justify-center">
-                  <Button
-                    onClick={handleDownloadQR}
-                    disabled={loading}
-                    className="bg-[#194a95] hover:bg-[#0f3a7a] text-white font-medium h-10 rounded-[20px]"
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download QR Code
-                  </Button>
-                </div>
               </div>
             )}
           </form>
@@ -527,4 +544,3 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
     </div>
   )
 }
-
