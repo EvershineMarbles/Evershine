@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
@@ -55,6 +55,21 @@ interface ApiResponse {
   }
 }
 
+interface ProductFormProps {
+  mode?: 'create' | 'edit'
+  initialData?: {
+    _id: string
+    postId: string
+    name: string
+    category: string
+    price: string
+    quantityAvailable: string
+    applicationAreas: string
+    description?: string
+    image: string[]
+  }
+}
+
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
 
@@ -67,26 +82,32 @@ const formSchema = z.object({
   description: z.string().optional(),
 })
 
-export default function ProductForm() {
+export default function ProductForm({ mode = 'create', initialData }: ProductFormProps) {
   const router = useRouter()
   const [images, setImages] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<MessageState | null>(null)
-  const [postId, setPostId] = useState<string | null>(null)
+  const [postId, setPostId] = useState<string | null>(initialData?.postId || null)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      category: "",
-      price: "",
-      quantityAvailable: "",
-      applicationAreas: "",
-      description: "",
+      name: initialData?.name || "",
+      category: initialData?.category || "",
+      price: initialData?.price || "",
+      quantityAvailable: initialData?.quantityAvailable || "",
+      applicationAreas: initialData?.applicationAreas || "",
+      description: initialData?.description || "",
     },
   })
+
+  useEffect(() => {
+    if (mode === 'edit' && initialData?.image) {
+      setPreviews(initialData.image)
+    }
+  }, [mode, initialData])
 
   const validateImage = (file: File): boolean => {
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
@@ -111,13 +132,11 @@ export default function ProductForm() {
         return
       }
 
-      // Validate each file
       const validFiles = fileArray.filter(validateImage)
       if (validFiles.length !== fileArray.length) return
 
       setImages(validFiles)
 
-      // Create preview URLs
       const newPreviews = validFiles.map((file) => URL.createObjectURL(file))
       setPreviews((prev) => {
         prev.forEach((url) => URL.revokeObjectURL(url))
@@ -127,11 +146,17 @@ export default function ProductForm() {
   }
 
   const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index))
-    setPreviews((prev) => {
-      URL.revokeObjectURL(prev[index])
-      return prev.filter((_, i) => i !== index)
-    })
+    if (mode === 'edit' && initialData?.image) {
+      const newPreviews = [...previews]
+      newPreviews.splice(index, 1)
+      setPreviews(newPreviews)
+    } else {
+      setImages((prev) => prev.filter((_, i) => i !== index))
+      setPreviews((prev) => {
+        URL.revokeObjectURL(prev[index])
+        return prev.filter((_, i) => i !== index)
+      })
+    }
   }
 
   const generateQRCode = async (postId: string): Promise<string> => {
@@ -166,11 +191,9 @@ export default function ProductForm() {
     try {
       setLoading(true)
       setMessage(null)
-      setPostId(null)
-      setQrCodeUrl("")
 
-      if (images.length === 0) {
-        throw new Error("You must upload at least one image")
+      if (previews.length === 0) {
+        throw new Error("You must have at least one image")
       }
 
       const formData = new FormData()
@@ -179,33 +202,53 @@ export default function ProductForm() {
         if (value) formData.append(key, value.toString())
       })
 
-      images.forEach((image) => {
-        formData.append("images", image)
-      })
+      // Handle images based on mode
+      if (mode === 'edit') {
+        formData.append("existingImages", JSON.stringify(previews))
+        if (images.length > 0) {
+          images.forEach((image) => formData.append("newImages", image))
+        }
+      } else {
+        images.forEach((image) => formData.append("images", image))
+      }
+
+      const endpoint = mode === 'edit' 
+        ? `${API_URL}/api/updateProduct/${initialData?.postId}`
+        : `${API_URL}/api/create-post`
 
       const response = await axios.post<ApiResponse>(
-        `${API_URL}/api/create-post`,
+        endpoint,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
         }
       )
 
-      if (response.data.success && response.data.data?.postId) {
-        const newPostId = response.data.data.postId
-        setPostId(newPostId)
-        const qrCode = await generateQRCode(newPostId)
-        setQrCodeUrl(qrCode)
-        setMessage({ text: "Product created successfully!", type: 'success' })
+      if (response.data.success) {
+        if (mode === 'create' && response.data.data?.postId) {
+          const newPostId = response.data.data.postId
+          setPostId(newPostId)
+          const qrCode = await generateQRCode(newPostId)
+          setQrCodeUrl(qrCode)
+        }
         
-        form.reset()
-        setImages([])
-        setPreviews([])
+        setMessage({ 
+          text: mode === 'edit' ? "Product updated successfully!" : "Product created successfully!", 
+          type: 'success' 
+        })
+
+        if (mode === 'create') {
+          form.reset()
+          setImages([])
+          setPreviews([])
+        } else {
+          setTimeout(() => router.push('/products'), 1500)
+        }
       } else {
-        throw new Error(response.data.msg || "Failed to create product")
+        throw new Error(response.data.msg || `Failed to ${mode} product`)
       }
     } catch (error) {
-      let errorMessage = "Error creating product"
+      let errorMessage = `Error ${mode === 'edit' ? 'updating' : 'creating'} product`
       
       if (error instanceof AxiosError) {
         errorMessage = error.response?.data?.msg || error.message
@@ -234,8 +277,9 @@ export default function ProductForm() {
           </button>
           
           <div className="text-center mt-4 mb-6">
-            <h1 className="text-3xl font-bold text-[#181818]">Add New Product</h1>
-            <p className="text-[#616467] text-sm mt-1.2">Enter All Product Details</p>
+            <h1 className="text-3xl font-bold text-[#181818]">
+              {mode === 'edit' ? 'Edit Product' : 'Add New Product'}
+            </h1>
           </div>
         </div>
       </div>
@@ -443,7 +487,7 @@ export default function ProductForm() {
             </div>
 
             {/* Success State with QR Code */}
-            {postId && qrCodeUrl && (
+            {postId && qrCodeUrl && mode === 'create' && (
               <Card className="p-6 text-center space-y-4 border-green-200 bg-green-50">
                 <h3 className="text-lg font-semibold text-green-600">Product Created Successfully!</h3>
                 <div className="flex justify-center">
@@ -478,23 +522,24 @@ export default function ProductForm() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    {mode === 'edit' ? 'Updating...' : 'Saving...'}
                   </>
                 ) : (
-                  "Save Product"
+                  mode === 'edit' ? 'Update Product' : 'Save Product'
                 )}
               </Button>
               <Button 
                 type="button" 
                 variant="outline" 
                 className="w-full border-[#e3e3e3] text-[#181818] font-medium h-12 rounded-[20px] hover:bg-gray-50"
+                onClick={() => router.back()}
               >
-                Draft
+                Cancel
               </Button>
             </div>
 
             {/* Message Display */}
-            {message && !qrCodeUrl && (
+            {message && (mode === 'edit' || !qrCodeUrl) && (
               <div className={`text-center mt-4 ${
                 message.type === 'error' ? 'text-red-500' : 'text-green-500'
               }`}>
