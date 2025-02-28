@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Trash2 } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
@@ -260,20 +260,12 @@ export default function ProductDetail() {
             ))}
 
             {/* Action Buttons */}
-            <div className="flex gap-4 flex-wrap">
+            <div className="flex gap-4">
               <Button
                 onClick={() => router.push(`/edit-product/${product.postId}`)}
                 className="px-12 py-3 bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-md"
               >
                 Edit
-              </Button>
-
-              <Button
-                onClick={() => window.open(`${API_URL}/api/qr/${product.postId}`, "_blank")}
-                className="px-12 py-3 bg-green-600 hover:bg-green-700 text-white rounded-md"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download QR
               </Button>
 
               <AlertDialog>
