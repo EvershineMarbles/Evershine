@@ -284,7 +284,7 @@ export default function ProductDetail() {
                     )}
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent>
+                <AlertDialogContent className="bg-white">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                     <AlertDialogDescription>
@@ -293,8 +293,27 @@ export default function ProductDetail() {
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+                    <AlertDialogCancel className="bg-gray-100 hover:bg-gray-200">Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        try {
+                          setIsDeleting(true)
+                          const response = await axios.delete(`${API_URL}/api/deleteProduct/${product.postId}`)
+
+                          if (response.data.success) {
+                            router.push("/products")
+                          } else {
+                            throw new Error(response.data.msg || "Failed to delete product")
+                          }
+                        } catch (error) {
+                          console.error("Error deleting product:", error)
+                          setError(error instanceof Error ? error.message : "Failed to delete product")
+                        } finally {
+                          setIsDeleting(false)
+                        }
+                      }}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
                       Delete
                     </AlertDialogAction>
                   </AlertDialogFooter>
