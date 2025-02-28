@@ -4,9 +4,9 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import axios from "axios"
 import ProductForm from "@/app/components/ProductForm"
-import { Loader2 } from 'lucide-react'
+import { Loader2 } from "lucide-react"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 interface Product {
   _id: string
@@ -18,7 +18,7 @@ interface Product {
   description?: string
   image: string[]
   postId: string
-  status?: 'draft' | 'pending' | 'approved'
+  status?: "draft" | "pending" | "approved"
 }
 
 export default function EditProduct() {
@@ -38,15 +38,29 @@ export default function EditProduct() {
     try {
       setLoading(true)
       setError(null)
-      
+
       console.log("Fetching product with ID:", params.id)
-      
+
       const response = await axios.get(`${API_URL}/api/getPostDataById?id=${params.id}`)
-      
+
       console.log("API Response:", response.data)
 
-      if (response.data.success && response.data.data) {
-        setProduct(response.data.data)
+      if (response.data.success && response.data.data?.[0]) {
+        // Note the data[0] here
+        // Transform the data to match the form's expected format
+        const productData = response.data.data[0]
+        setProduct({
+          _id: productData._id,
+          name: productData.name,
+          category: productData.category,
+          price: productData.price.toString(),
+          quantityAvailable: productData.quantityAvailable.toString(),
+          applicationAreas: productData.applicationAreas,
+          description: productData.description || "",
+          image: productData.image,
+          postId: productData.postId,
+          status: productData.status,
+        })
       } else {
         setError("Failed to fetch product details")
       }
@@ -73,10 +87,7 @@ export default function EditProduct() {
         <div className="max-w-md mx-auto text-center px-4">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Product</h2>
           <p className="text-red-500 mb-4">{error}</p>
-          <button
-            onClick={() => router.back()}
-            className="text-[#194a95] hover:text-[#0f3a7a] font-medium"
-          >
+          <button onClick={() => router.back()} className="text-[#194a95] hover:text-[#0f3a7a] font-medium">
             ← Go Back
           </button>
         </div>
@@ -89,13 +100,8 @@ export default function EditProduct() {
       <div className="flex flex-col items-center justify-center min-h-screen bg-white">
         <div className="max-w-md mx-auto text-center px-4">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Product Not Found</h2>
-          <p className="text-gray-600 mb-4">
-            The product you're looking for doesn't exist or has been removed.
-          </p>
-          <button
-            onClick={() => router.back()}
-            className="text-[#194a95] hover:text-[#0f3a7a] font-medium"
-          >
+          <p className="text-gray-600 mb-4">The product you're looking for doesn't exist or has been removed.</p>
+          <button onClick={() => router.back()} className="text-[#194a95] hover:text-[#0f3a7a] font-medium">
             ← Go Back
           </button>
         </div>
@@ -105,10 +111,8 @@ export default function EditProduct() {
 
   return (
     <div className="min-h-screen bg-white">
-      <ProductForm 
-        mode="edit" 
-        initialData={product} 
-      />
+      <ProductForm mode="edit" initialData={product} />
     </div>
   )
 }
+
