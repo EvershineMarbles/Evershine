@@ -39,27 +39,15 @@ export default function EditProduct() {
       setLoading(true)
       setError(null)
 
-      console.log("Fetching product with ID:", params.id)
-
       const response = await axios.get(`${API_URL}/api/getPostDataById?id=${params.id}`)
 
-      console.log("API Response:", response.data)
-
       if (response.data.success && response.data.data?.[0]) {
-        // Note the data[0] here
-        // Transform the data to match the form's expected format
+        // Transform numeric values to strings for the form
         const productData = response.data.data[0]
         setProduct({
-          _id: productData._id,
-          name: productData.name,
-          category: productData.category,
+          ...productData,
           price: productData.price.toString(),
           quantityAvailable: productData.quantityAvailable.toString(),
-          applicationAreas: productData.applicationAreas,
-          description: productData.description || "",
-          image: productData.image,
-          postId: productData.postId,
-          status: productData.status,
         })
       } else {
         setError("Failed to fetch product details")
