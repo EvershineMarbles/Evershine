@@ -3,9 +3,20 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -36,6 +47,7 @@ export default function ProductDetail() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedThumbnail, setSelectedThumbnail] = useState(0)
   const [imageLoadError, setImageLoadError] = useState<boolean[]>([])
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -75,6 +87,29 @@ export default function ProductDetail() {
 
     fetchProduct()
   }, [params.id])
+
+  const handleDelete = async () => {
+    try {
+      setIsDeleting(true)
+      const response = await axios.delete(`${API_URL}/api/deleteProduct/${product?.postId}`)
+
+      if (response.data.success) {
+        router.push("/products")
+      } else {
+        throw new Error(response.data.msg || "Failed to delete product")
+      }
+    } catch (error) {
+      let errorMessage = "Error deleting product"
+      if (error instanceof AxiosError) {
+        errorMessage = error.response?.data?.msg || error.message
+      } else if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      setError(errorMessage)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const handleThumbnailClick = (index: number) => {
     setCurrentImageIndex(index)
@@ -224,13 +259,48 @@ export default function ProductDetail() {
               </div>
             ))}
 
-            {/* Edit Button */}
-            <Button
-              onClick={() => router.push(`/edit-product/${product.postId}`)}
-              className="w-full md:w-auto px-12 py-3 bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-md"
-            >
-              Edit
-            </Button>
+            {/* Action Buttons */}
+            <div className="flex gap-4">
+              <Button
+                onClick={() => router.push(`/edit-product/${product.postId}`)}
+                className="px-12 py-3 bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-md"
+              >
+                Edit
+              </Button>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="px-12 py-3" disabled={isDeleting}>
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </>
+                    )}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the product and remove all associated
+                      data.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         </div>
       </div>
