@@ -1,10 +1,12 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { ArrowLeft, Plus, Loader2, Download, X } from 'lucide-react'
+import { ArrowLeft, Plus, Loader2, Download, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
 import QRCode from "qrcode"
@@ -17,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card } from "@/components/ui/card"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 const CATEGORIES = [
   "Imported Marble",
@@ -34,12 +36,12 @@ const CATEGORIES = [
 
 const APPLICATION_AREAS = ["Flooring", "Countertops", "Walls", "Exterior", "Interior"] as const
 
-type Category = typeof CATEGORIES[number]
-type ApplicationArea = typeof APPLICATION_AREAS[number]
+type Category = (typeof CATEGORIES)[number]
+type ApplicationArea = (typeof APPLICATION_AREAS)[number]
 
 interface MessageState {
   text: string
-  type: 'error' | 'success'
+  type: "error" | "success"
 }
 
 interface FormValues extends z.infer<typeof formSchema> {
@@ -56,7 +58,7 @@ interface ApiResponse {
 }
 
 interface ProductFormProps {
-  mode?: 'create' | 'edit'
+  mode?: "create" | "edit"
   initialData?: {
     _id: string
     postId: string
@@ -78,11 +80,11 @@ const formSchema = z.object({
   category: z.string().min(1, "Please select a category"),
   price: z.string().min(1, "Price is required"),
   quantityAvailable: z.string().min(1, "Quantity is required"),
-  applicationAreas: z.string().min(1, "Please select an application area"),
+  applicationAreas: z.array(z.string()).min(1, "Please select at least one application area"),
   description: z.string().optional(),
 })
 
-export default function ProductForm({ mode = 'create', initialData }: ProductFormProps) {
+export default function ProductForm({ mode = "create", initialData }: ProductFormProps) {
   const router = useRouter()
   const [images, setImages] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
@@ -98,25 +100,25 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
       category: initialData?.category || "",
       price: initialData?.price || "",
       quantityAvailable: initialData?.quantityAvailable || "",
-      applicationAreas: initialData?.applicationAreas || "",
+      applicationAreas: initialData?.applicationAreas ? initialData.applicationAreas.split(",") : [],
       description: initialData?.description || "",
     },
   })
 
   useEffect(() => {
-    if (mode === 'edit' && initialData?.image) {
+    if (mode === "edit" && initialData?.image) {
       setPreviews(initialData.image)
     }
   }, [mode, initialData])
 
   const validateImage = (file: File): boolean => {
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      setMessage({ text: "Invalid file type. Only JPG, PNG and WebP are allowed", type: 'error' })
+      setMessage({ text: "Invalid file type. Only JPG, PNG and WebP are allowed", type: "error" })
       return false
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setMessage({ text: "File size too large. Maximum size is 5MB", type: 'error' })
+      setMessage({ text: "File size too large. Maximum size is 5MB", type: "error" })
       return false
     }
 
@@ -126,9 +128,9 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const fileArray = Array.from(e.target.files)
-      
+
       if (fileArray.length > 4) {
-        setMessage({ text: "You can only upload up to 4 images", type: 'error' })
+        setMessage({ text: "You can only upload up to 4 images", type: "error" })
         return
       }
 
@@ -146,7 +148,7 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
   }
 
   const removeImage = (index: number) => {
-    if (mode === 'edit' && initialData?.image) {
+    if (mode === "edit" && initialData?.image) {
       const newPreviews = [...previews]
       newPreviews.splice(index, 1)
       setPreviews(newPreviews)
@@ -178,7 +180,7 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
 
   const handleDownloadQR = () => {
     if (!qrCodeUrl || !postId) return
-    
+
     const link = document.createElement("a")
     link.href = qrCodeUrl
     link.download = `product-qr-${postId}.png`
@@ -198,12 +200,18 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
 
       const formData = new FormData()
 
-      Object.entries(values).forEach(([key, value]) => {
+      // Convert applicationAreas array to string
+      const formValues = {
+        ...values,
+        applicationAreas: values.applicationAreas.join(","),
+      }
+
+      Object.entries(formValues).forEach(([key, value]) => {
         if (value) formData.append(key, value.toString())
       })
 
       // Handle images based on mode
-      if (mode === 'edit') {
+      if (mode === "edit") {
         formData.append("existingImages", JSON.stringify(previews))
         if (images.length > 0) {
           images.forEach((image) => formData.append("newImages", image))
@@ -212,51 +220,46 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
         images.forEach((image) => formData.append("images", image))
       }
 
-      const endpoint = mode === 'edit' 
-        ? `${API_URL}/api/updateProduct/${initialData?.postId}`
-        : `${API_URL}/api/create-post`
+      const endpoint =
+        mode === "edit" ? `${API_URL}/api/updateProduct/${initialData?.postId}` : `${API_URL}/api/create-post`
 
-      const response = await axios.post<ApiResponse>(
-        endpoint,
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      )
+      const response = await axios.post<ApiResponse>(endpoint, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
 
       if (response.data.success) {
-        if (mode === 'create' && response.data.data?.postId) {
+        if (mode === "create" && response.data.data?.postId) {
           const newPostId = response.data.data.postId
           setPostId(newPostId)
           const qrCode = await generateQRCode(newPostId)
           setQrCodeUrl(qrCode)
         }
-        
-        setMessage({ 
-          text: mode === 'edit' ? "Product updated successfully!" : "Product created successfully!", 
-          type: 'success' 
+
+        setMessage({
+          text: mode === "edit" ? "Product updated successfully!" : "Product created successfully!",
+          type: "success",
         })
 
-        if (mode === 'create') {
+        if (mode === "create") {
           form.reset()
           setImages([])
           setPreviews([])
         } else {
-          setTimeout(() => router.push('/products'), 1500)
+          setTimeout(() => router.push("/products"), 1500)
         }
       } else {
         throw new Error(response.data.msg || `Failed to ${mode} product`)
       }
     } catch (error) {
-      let errorMessage = `Error ${mode === 'edit' ? 'updating' : 'creating'} product`
-      
+      let errorMessage = `Error ${mode === "edit" ? "updating" : "creating"} product`
+
       if (error instanceof AxiosError) {
         errorMessage = error.response?.data?.msg || error.message
       } else if (error instanceof Error) {
         errorMessage = error.message
       }
-      
-      setMessage({ text: errorMessage, type: 'error' })
+
+      setMessage({ text: errorMessage, type: "error" })
       console.error("Error:", error)
     } finally {
       setLoading(false)
@@ -268,17 +271,17 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
       {/* Header */}
       <div className="sticky top-0 z-50 bg-white">
         <div className="p-4">
-          <button 
-            onClick={() => router.back()} 
+          <button
+            onClick={() => router.back()}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             aria-label="Go back"
           >
             <ArrowLeft className="h-6 w-6" />
           </button>
-          
+
           <div className="text-center mt-4 mb-6">
             <h1 className="text-3xl font-bold text-[#181818]">
-              {mode === 'edit' ? 'Edit Product' : 'Add New Product'}
+              {mode === "edit" ? "Edit Product" : "Add New Product"}
             </h1>
           </div>
         </div>
@@ -297,10 +300,10 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input 
-                        placeholder="Enter product name" 
-                        className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]" 
-                        {...field} 
+                      <Input
+                        placeholder="Enter product name"
+                        className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -319,9 +322,7 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
                   <FormItem>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger 
-                          className="rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95]"
-                        >
+                        <SelectTrigger className="rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95]">
                           <SelectValue placeholder="Select a category" />
                         </SelectTrigger>
                       </FormControl>
@@ -357,11 +358,11 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="per sqft" 
-                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]" 
-                          {...field} 
+                        <Input
+                          type="number"
+                          placeholder="per sqft"
+                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -378,11 +379,11 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="in sqft" 
-                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]" 
-                          {...field} 
+                        <Input
+                          type="number"
+                          placeholder="in sqft"
+                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -436,30 +437,60 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
                 name="applicationAreas"
                 render={({ field }) => (
                   <FormItem>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger 
-                          className="rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95]"
+                    <FormControl>
+                      <div className="relative">
+                        <Select
+                          onValueChange={(value) => {
+                            const currentValues = field.value || []
+                            const newValues = currentValues.includes(value)
+                              ? currentValues.filter((v) => v !== value)
+                              : [...currentValues, value]
+                            field.onChange(newValues)
+                          }}
+                          value={field.value?.[field.value.length - 1] || ""}
                         >
-                          <SelectValue placeholder="Select application area" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent
-                        className="bg-white border rounded-md shadow-lg z-50"
-                        position="popper"
-                        sideOffset={5}
-                      >
-                        {APPLICATION_AREAS.map((area) => (
-                          <SelectItem
-                            key={area}
-                            value={area}
-                            className="px-3 py-2 focus:bg-gray-100 cursor-pointer hover:bg-gray-50"
+                          <SelectTrigger className="w-full rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95]">
+                            <SelectValue>
+                              {field.value?.length
+                                ? `${field.value.length} area${field.value.length > 1 ? "s" : ""} selected`
+                                : "Select application areas"}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {APPLICATION_AREAS.map((area) => (
+                              <SelectItem
+                                key={area}
+                                value={area}
+                                className={`px-3 py-2 cursor-pointer hover:bg-gray-50 ${
+                                  field.value?.includes(area) ? "bg-[#194a95] text-white" : ""
+                                }`}
+                              >
+                                {area}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </FormControl>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {field.value?.map((area) => (
+                        <div
+                          key={area}
+                          className="bg-[#194a95] text-white px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                        >
+                          {area}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              field.onChange(field.value?.filter((v) => v !== area))
+                            }}
+                            className="hover:bg-[#0f3a7a] rounded-full p-1"
                           >
-                            {area}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -487,7 +518,7 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
             </div>
 
             {/* Success State with QR Code */}
-            {postId && qrCodeUrl && mode === 'create' && (
+            {postId && qrCodeUrl && mode === "create" && (
               <Card className="p-6 text-center space-y-4 border-green-200 bg-green-50">
                 <h3 className="text-lg font-semibold text-green-600">Product Created Successfully!</h3>
                 <div className="flex justify-center">
@@ -515,6 +546,14 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-4 pt-4">
               <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+                className="w-full h-12 rounded-[20px]"
+              >
+                Cancel
+              </Button>
+              <Button
                 type="submit"
                 disabled={loading}
                 className="w-full bg-[#194a95] hover:bg-[#0f3a7a] text-white font-medium h-12 rounded-[20px]"
@@ -522,19 +561,19 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {mode === 'edit' ? 'Updating...' : 'Saving...'}
+                    {mode === "edit" ? "Updating..." : "Saving..."}
                   </>
+                ) : mode === "edit" ? (
+                  "Update Product"
                 ) : (
-                  mode === 'edit' ? 'Update Product' : 'Save Product'
+                  "Save Product"
                 )}
               </Button>
             </div>
 
             {/* Message Display */}
-            {message && (mode === 'edit' || !qrCodeUrl) && (
-              <div className={`text-center mt-4 ${
-                message.type === 'error' ? 'text-red-500' : 'text-green-500'
-              }`}>
+            {message && (mode === "edit" || !qrCodeUrl) && (
+              <div className={`text-center mt-4 ${message.type === "error" ? "text-red-500" : "text-green-500"}`}>
                 {message.text}
               </div>
             )}
@@ -544,3 +583,4 @@ export default function ProductForm({ mode = 'create', initialData }: ProductFor
     </div>
   )
 }
+
