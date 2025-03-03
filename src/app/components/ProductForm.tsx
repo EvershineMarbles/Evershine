@@ -430,7 +430,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
             </div>
 
             {/* Application Areas */}
-            <div className="form-field relative z-30">
+            <div className="form-field relative z-50">
               <FormLabel className="text-[#181818] font-bold block mb-2">Application Areas</FormLabel>
               <FormField
                 control={form.control}
@@ -449,14 +449,14 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                           }}
                           value={field.value?.[field.value.length - 1] || ""}
                         >
-                          <SelectTrigger className="w-full rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95]">
+                          <SelectTrigger className="w-full rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95] overflow-visible">
                             <SelectValue>
                               {field.value?.length
                                 ? `${field.value.length} area${field.value.length > 1 ? "s" : ""} selected`
                                 : "Select application areas"}
                             </SelectValue>
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-white border rounded-md shadow-lg z-50">
                             {APPLICATION_AREAS.map((area) => (
                               <SelectItem
                                 key={area}
