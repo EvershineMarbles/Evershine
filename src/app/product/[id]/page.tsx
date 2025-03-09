@@ -68,6 +68,8 @@ export default function ProductDetail() {
         })
 
         if (response.data.success && response.data.data?.[0]) {
+          // Log the product data received from the API
+          console.log("Product data received:", JSON.stringify(response.data.data[0], null, 2))
           setProduct(response.data.data[0])
           setImageLoadError(new Array(response.data.data[0].image.length).fill(false))
         } else {
@@ -184,6 +186,13 @@ export default function ProductDetail() {
   }
 
   const applicationAreas = getApplicationAreas()
+
+  // Log the product data and the specific fields we're interested in
+  console.log("Product data in render:", {
+    size: product.size,
+    numberOfPieces: product.numberOfPieces,
+    thickness: product.thickness,
+  })
 
   return (
     <div className="min-h-screen bg-white p-6">
