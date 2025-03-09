@@ -108,7 +108,18 @@ export default function ProductDetail() {
           const productData = response.data.data[0]
           console.log("Product data received from API:", JSON.stringify(productData, null, 2))
           debugProductData(productData)
-          setProduct(productData)
+
+          // Add missing fields if they don't exist
+          const processedProduct = {
+            ...productData,
+            size: productData.size !== undefined ? productData.size : "",
+            numberOfPieces: productData.numberOfPieces !== undefined ? productData.numberOfPieces : null,
+            thickness: productData.thickness !== undefined ? productData.thickness : "",
+          }
+
+          console.log("Processed product with added fields:", processedProduct)
+
+          setProduct(processedProduct)
           setImageLoadError(new Array(productData.image.length).fill(false))
         } else {
           throw new Error(response.data.msg || "No data found")
