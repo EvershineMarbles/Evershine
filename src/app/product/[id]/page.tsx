@@ -26,13 +26,13 @@ interface Product {
   name: string
   price: number
   category: string
-  applicationAreas: string
+  applicationAreas: string | string[]
   description: string
   image: string[]
   postId: string
   quantityAvailable: number
   size?: string
-  numberOfPieces?: string
+  numberOfPieces?: number
   thickness?: string
 }
 
@@ -165,8 +165,25 @@ export default function ProductDetail() {
     )
   }
 
-  // Parse application areas from comma-separated string
-  const applicationAreas = product.applicationAreas.split(",").filter(Boolean)
+  // Parse application areas safely, handling both string and array types
+  const getApplicationAreas = () => {
+    if (!product.applicationAreas) return []
+
+    if (typeof product.applicationAreas === "string") {
+      return product.applicationAreas
+        .split(",")
+        .filter(Boolean)
+        .map((area) => area.trim())
+    }
+
+    if (Array.isArray(product.applicationAreas)) {
+      return product.applicationAreas
+    }
+
+    return []
+  }
+
+  const applicationAreas = getApplicationAreas()
 
   return (
     <div className="min-h-screen bg-white p-6">
@@ -294,7 +311,7 @@ export default function ProductDetail() {
                 {applicationAreas.length > 0 ? (
                   applicationAreas.map((area, index) => (
                     <Badge key={index} className="bg-[#194a95] hover:bg-[#194a95] text-white px-3 py-1 text-sm">
-                      {area.trim()}
+                      {area}
                     </Badge>
                   ))
                 ) : (
