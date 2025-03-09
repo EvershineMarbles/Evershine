@@ -17,7 +17,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -31,9 +30,6 @@ interface Product {
   image: string[]
   postId: string
   quantityAvailable: number
-  size?: string
-  numberOfPieces?: string
-  thickness?: string
 }
 
 interface ApiResponse {
@@ -165,9 +161,6 @@ export default function ProductDetail() {
     )
   }
 
-  // Parse application areas from comma-separated string
-  const applicationAreas = product.applicationAreas.split(",").filter(Boolean)
-
   return (
     <div className="min-h-screen bg-white p-6">
       {/* Back Button */}
@@ -247,67 +240,24 @@ export default function ProductDetail() {
 
           {/* Product Details */}
           <div className="w-full md:w-1/2 md:order-1 space-y-6">
-            {/* Product Name */}
-            <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-500">Product Name</p>
-              <h1 className="text-3xl font-bold mt-1">{product.name}</h1>
-            </div>
-
-            {/* Price */}
-            <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-500">Price (per sqft)</p>
-              <p className="text-xl font-bold mt-1">₹{product.price}/per sqft</p>
-            </div>
-
-            {/* Product Category */}
-            <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-500">Product Category</p>
-              <p className="text-xl font-bold mt-1">{product.category}</p>
-            </div>
-
-            {/* Quantity Available */}
-            <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-500">Quality Available (in sqft)</p>
-              <p className="text-xl font-bold mt-1">{product.quantityAvailable}</p>
-            </div>
-
-            {/* Size, No. of Pieces, and Thickness in 3 columns */}
-            <div className="grid grid-cols-3 gap-4 pb-4 border-b border-gray-200">
-              <div>
-                <p className="text-gray-500">Size</p>
-                <p className="text-lg font-bold mt-1">{product.size || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">No. of Pieces</p>
-                <p className="text-lg font-bold mt-1">{product.numberOfPieces || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Thickness</p>
-                <p className="text-lg font-bold mt-1">{product.thickness || "N/A"}</p>
-              </div>
-            </div>
-
-            {/* Application Areas */}
-            <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-500">Application Areas</p>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {applicationAreas.length > 0 ? (
-                  applicationAreas.map((area, index) => (
-                    <Badge key={index} className="bg-[#194a95] hover:bg-[#194a95] text-white px-3 py-1 text-sm">
-                      {area.trim()}
-                    </Badge>
-                  ))
+            {/* Product Info Sections */}
+            {[
+              { label: "Product Name", value: product.name, isTitle: true },
+              { label: "Price (per sqft)", value: `₹${product.price}/per sqft` },
+              { label: "Product Category", value: product.category },
+              { label: "Quality Available (in sqft)", value: product.quantityAvailable },
+              { label: "Application Areas", value: product.applicationAreas },
+              { label: "About Product", value: product.description || "Product mainly used for countertop" },
+            ].map((item, index) => (
+              <div key={index} className="pb-4 border-b border-gray-200">
+                <p className="text-gray-500">{item.label}</p>
+                {item.isTitle ? (
+                  <h1 className="text-3xl font-bold mt-1">{item.value}</h1>
                 ) : (
-                  <p className="text-gray-600">No application areas specified</p>
+                  <p className="text-xl font-bold mt-1">{item.value}</p>
                 )}
               </div>
-            </div>
-
-            {/* About Product */}
-            <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-500">About Product</p>
-              <p className="text-xl font-bold mt-1">{product.description || "Product mainly used for countertop"}</p>
-            </div>
+            ))}
 
             {/* Action Buttons */}
             <div className="flex gap-4">
@@ -344,7 +294,26 @@ export default function ProductDetail() {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel className="bg-gray-100 hover:bg-gray-200">Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                    <AlertDialogAction
+                      onClick={async () => {
+                        try {
+                          setIsDeleting(true)
+                          const response = await axios.delete(`${API_URL}/api/deleteProduct/${product.postId}`)
+
+                          if (response.data.success) {
+                            router.push("/products")
+                          } else {
+                            throw new Error(response.data.msg || "Failed to delete product")
+                          }
+                        } catch (error) {
+                          console.error("Error deleting product:", error)
+                          setError(error instanceof Error ? error.message : "Failed to delete product")
+                        } finally {
+                          setIsDeleting(false)
+                        }
+                      }}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
                       Delete
                     </AlertDialogAction>
                   </AlertDialogFooter>
