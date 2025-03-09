@@ -42,6 +42,42 @@ interface ApiResponse {
   msg?: string
 }
 
+// Add this enhanced debugging function at the top of the component, before the useEffect
+const debugProductData = (data: any) => {
+  console.log("========== PRODUCT DATA DEBUGGING ==========")
+  console.log("Raw product data:", JSON.stringify(data, null, 2))
+
+  // Detailed logging for size
+  console.log("SIZE FIELD:")
+  console.log("  Value:", data.size)
+  console.log("  Type:", typeof data.size)
+  console.log("  Is empty string:", data.size === "")
+  console.log("  Is null:", data.size === null)
+  console.log("  Is undefined:", data.size === undefined)
+  console.log("  Property exists:", Object.prototype.hasOwnProperty.call(data, "size"))
+
+  // Detailed logging for numberOfPieces
+  console.log("NUMBER OF PIECES FIELD:")
+  console.log("  Value:", data.numberOfPieces)
+  console.log("  Type:", typeof data.numberOfPieces)
+  console.log("  Is zero:", data.numberOfPieces === 0)
+  console.log("  Is null:", data.numberOfPieces === null)
+  console.log("  Is undefined:", data.numberOfPieces === undefined)
+  console.log("  Property exists:", Object.prototype.hasOwnProperty.call(data, "numberOfPieces"))
+
+  // Detailed logging for thickness
+  console.log("THICKNESS FIELD:")
+  console.log("  Value:", data.thickness)
+  console.log("  Type:", typeof data.thickness)
+  console.log("  Is empty string:", data.thickness === "")
+  console.log("  Is null:", data.thickness === null)
+  console.log("  Is undefined:", data.thickness === undefined)
+  console.log("  Property exists:", Object.prototype.hasOwnProperty.call(data, "thickness"))
+
+  console.log("All keys in product object:", Object.keys(data))
+  console.log("=========================================")
+}
+
 export default function ProductDetail() {
   const params = useParams()
   const router = useRouter()
@@ -53,6 +89,7 @@ export default function ProductDetail() {
   const [imageLoadError, setImageLoadError] = useState<boolean[]>([])
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // Update the useEffect to use this enhanced debugging
   useEffect(() => {
     const fetchProduct = async () => {
       try {
@@ -68,10 +105,11 @@ export default function ProductDetail() {
         })
 
         if (response.data.success && response.data.data?.[0]) {
-          // Log the product data received from the API
-          console.log("Product data received:", JSON.stringify(response.data.data[0], null, 2))
-          setProduct(response.data.data[0])
-          setImageLoadError(new Array(response.data.data[0].image.length).fill(false))
+          const productData = response.data.data[0]
+          console.log("Product data received from API:", JSON.stringify(productData, null, 2))
+          debugProductData(productData)
+          setProduct(productData)
+          setImageLoadError(new Array(productData.image.length).fill(false))
         } else {
           throw new Error(response.data.msg || "No data found")
         }
@@ -187,12 +225,14 @@ export default function ProductDetail() {
 
   const applicationAreas = getApplicationAreas()
 
-  // Log the product data and the specific fields we're interested in
-  console.log("Product data in render:", {
-    size: product.size,
-    numberOfPieces: product.numberOfPieces,
-    thickness: product.thickness,
-  })
+  // Also add debugging right before rendering
+  if (product) {
+    console.log("========== PRODUCT DATA BEFORE RENDER ==========")
+    console.log("Size:", product.size)
+    console.log("Number of Pieces:", product.numberOfPieces)
+    console.log("Thickness:", product.thickness)
+    console.log("=================================================")
+  }
 
   return (
     <div className="min-h-screen bg-white p-6">
@@ -301,15 +341,25 @@ export default function ProductDetail() {
             <div className="grid grid-cols-3 gap-4 pb-4 border-b border-gray-200">
               <div>
                 <p className="text-gray-500">Size</p>
-                <p className="text-lg font-bold mt-1">{product.size || "-"}</p>
+                <p className="text-lg font-bold mt-1">
+                  {product.size !== undefined && product.size !== null && product.size !== "" ? product.size : "-"}
+                </p>
               </div>
               <div>
                 <p className="text-gray-500">No. of Pieces</p>
-                <p className="text-lg font-bold mt-1">{product.numberOfPieces || "-"}</p>
+                <p className="text-lg font-bold mt-1">
+                  {product.numberOfPieces !== undefined && product.numberOfPieces !== null
+                    ? product.numberOfPieces
+                    : "-"}
+                </p>
               </div>
               <div>
                 <p className="text-gray-500">Thickness</p>
-                <p className="text-lg font-bold mt-1">{product.thickness || "-"}</p>
+                <p className="text-lg font-bold mt-1">
+                  {product.thickness !== undefined && product.thickness !== null && product.thickness !== ""
+                    ? product.thickness
+                    : "-"}
+                </p>
               </div>
             </div>
 
