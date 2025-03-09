@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { ArrowLeft, Plus, Loader2, Download, X } from "lucide-react"
+import { ArrowLeft, Plus, Loader2, Download, X } from 'lucide-react'
 import { useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
 import QRCode from "qrcode"
@@ -66,6 +66,9 @@ interface ProductFormProps {
     category: string
     price: string
     quantityAvailable: string
+    size?: string
+    numberOfPieces?: string
+    thickness?: string
     applicationAreas: string
     description?: string
     image: string[]
@@ -80,6 +83,9 @@ const formSchema = z.object({
   category: z.string().min(1, "Please select a category"),
   price: z.string().min(1, "Price is required"),
   quantityAvailable: z.string().min(1, "Quantity is required"),
+  size: z.string().optional(),
+  numberOfPieces: z.string().optional(),
+  thickness: z.string().optional(),
   applicationAreas: z.array(z.string()).min(1, "Please select at least one application area"),
   description: z.string().optional(),
 })
@@ -100,6 +106,9 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       category: initialData?.category || "",
       price: initialData?.price || "",
       quantityAvailable: initialData?.quantityAvailable || "",
+      size: initialData?.size || "",
+      numberOfPieces: initialData?.numberOfPieces || "",
+      thickness: initialData?.thickness || "",
       applicationAreas: initialData?.applicationAreas ? initialData.applicationAreas.split(",") : [],
       description: initialData?.description || "",
     },
@@ -214,7 +223,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       if (mode === "edit") {
         formData.append("existingImages", JSON.stringify(previews))
         if (images.length > 0) {
-          images.forEach((image) => formData.append("newImages", image))
+          images.forEach((image) => formData.append("images", image))
         }
       } else {
         images.forEach((image) => formData.append("images", image))
@@ -384,6 +393,70 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                           placeholder="in sqft"
                           className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
                           {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Size, Number of Pieces, and Thickness */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="form-field">
+                <FormLabel className="text-[#181818] font-bold block mb-2">Size</FormLabel>
+                <FormField
+                  control={form.control}
+                  name="size"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., 60x60 cm" 
+                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="form-field">
+                <FormLabel className="text-[#181818] font-bold block mb-2">No. of Pieces</FormLabel>
+                <FormField
+                  control={form.control}
+                  name="numberOfPieces"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="Enter quantity" 
+                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="form-field">
+                <FormLabel className="text-[#181818] font-bold block mb-2">Thickness</FormLabel>
+                <FormField
+                  control={form.control}
+                  name="thickness"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., 20mm" 
+                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]" 
+                          {...field} 
                         />
                       </FormControl>
                       <FormMessage />
@@ -583,4 +656,3 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
     </div>
   )
 }
-
