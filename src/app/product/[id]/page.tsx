@@ -292,15 +292,15 @@ export default function ProductDetail() {
             <div className="grid grid-cols-3 gap-4 pb-4 border-b border-gray-200">
               <div>
                 <p className="text-gray-500">Size</p>
-                <p className="text-lg font-bold mt-1">{product.size || "N/A"}</p>
+                <p className="text-lg font-bold mt-1">{product.size || "-"}</p>
               </div>
               <div>
                 <p className="text-gray-500">No. of Pieces</p>
-                <p className="text-lg font-bold mt-1">{product.numberOfPieces || "N/A"}</p>
+                <p className="text-lg font-bold mt-1">{product.numberOfPieces || "-"}</p>
               </div>
               <div>
                 <p className="text-gray-500">Thickness</p>
-                <p className="text-lg font-bold mt-1">{product.thickness || "N/A"}</p>
+                <p className="text-lg font-bold mt-1">{product.thickness || "-"}</p>
               </div>
             </div>
 
