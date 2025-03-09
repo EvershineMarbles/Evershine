@@ -32,7 +32,7 @@ interface Product {
   postId: string
   quantityAvailable: number
   size?: string
-  numberOfPieces?: number
+  numberOfPieces?: number | null
   thickness?: string
 }
 
