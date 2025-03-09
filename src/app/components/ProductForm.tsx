@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { ArrowLeft, Plus, Loader2, Download, X } from 'lucide-react'
+import { ArrowLeft, Plus, Loader2, Download, X, Check } from "lucide-react"
 import { useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
 import QRCode from "qrcode"
@@ -98,6 +98,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
   const [message, setMessage] = useState<MessageState | null>(null)
   const [postId, setPostId] = useState<string | null>(initialData?.postId || null)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
+  const [newImageCount, setNewImageCount] = useState<number>(0)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -138,35 +139,54 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
     if (e.target.files) {
       const fileArray = Array.from(e.target.files)
 
-      if (fileArray.length > 4) {
-        setMessage({ text: "You can only upload up to 4 images", type: "error" })
+      // Check if adding these new files would exceed the limit
+      const totalImagesAfterAddition = images.length + fileArray.length
+      if (totalImagesAfterAddition > 10) {
+        setMessage({ text: "You can only upload up to 10 images in total", type: "error" })
         return
       }
 
       const validFiles = fileArray.filter(validateImage)
       if (validFiles.length !== fileArray.length) return
 
-      setImages(validFiles)
+      // Append new files to existing ones instead of replacing
+      setImages((prevImages) => [...prevImages, ...validFiles])
+      setNewImageCount((prevCount) => prevCount + validFiles.length)
 
+      // Create object URLs for new images and append to existing previews
       const newPreviews = validFiles.map((file) => URL.createObjectURL(file))
-      setPreviews((prev) => {
-        prev.forEach((url) => URL.revokeObjectURL(url))
-        return newPreviews
-      })
+      setPreviews((prevPreviews) => [...prevPreviews, ...newPreviews])
     }
   }
 
   const removeImage = (index: number) => {
-    if (mode === "edit" && initialData?.image) {
+    if (mode === "edit" && index < (initialData?.image.length || 0)) {
+      // Removing an existing image from the server
       const newPreviews = [...previews]
       newPreviews.splice(index, 1)
       setPreviews(newPreviews)
     } else {
-      setImages((prev) => prev.filter((_, i) => i !== index))
-      setPreviews((prev) => {
-        URL.revokeObjectURL(prev[index])
-        return prev.filter((_, i) => i !== index)
+      // Removing a newly added image
+      const adjustedIndex = mode === "edit" ? index - (initialData?.image.length || 0) : index
+
+      // Remove the file from images array
+      setImages((prev) => {
+        const newImages = [...prev]
+        newImages.splice(adjustedIndex, 1)
+        return newImages
       })
+
+      // Remove the preview and revoke the object URL
+      setPreviews((prev) => {
+        const urlToRevoke = prev[index]
+        URL.revokeObjectURL(urlToRevoke)
+
+        const newPreviews = [...prev]
+        newPreviews.splice(index, 1)
+        return newPreviews
+      })
+
+      setNewImageCount((prev) => prev - 1)
     }
   }
 
@@ -221,11 +241,19 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
 
       // Handle images based on mode
       if (mode === "edit") {
-        formData.append("existingImages", JSON.stringify(previews))
+        // For edit mode, we need to track which images are from the server
+        // and which are newly uploaded
+        const existingImages = initialData?.image || []
+        const existingImagesInPreviews = previews.filter((url) => existingImages.includes(url))
+
+        formData.append("existingImages", JSON.stringify(existingImagesInPreviews))
+
+        // Add all new images
         if (images.length > 0) {
           images.forEach((image) => formData.append("images", image))
         }
       } else {
+        // For create mode, all images are new
         images.forEach((image) => formData.append("images", image))
       }
 
@@ -253,6 +281,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
           form.reset()
           setImages([])
           setPreviews([])
+          setNewImageCount(0)
         } else {
           setTimeout(() => router.push("/products"), 1500)
         }
@@ -412,10 +441,10 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input 
-                          placeholder="e.g., 60x60 cm" 
-                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]" 
-                          {...field} 
+                        <Input
+                          placeholder="e.g., 60x60 cm"
+                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -432,11 +461,11 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="Enter quantity" 
-                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]" 
-                          {...field} 
+                        <Input
+                          type="number"
+                          placeholder="Enter quantity"
+                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -453,10 +482,10 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input 
-                          placeholder="e.g., 20mm" 
-                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]" 
-                          {...field} 
+                        <Input
+                          placeholder="e.g., 20mm"
+                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -468,14 +497,18 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
 
             {/* Image Upload */}
             <div className="form-field">
-              <FormLabel className="text-[#181818] font-bold block mb-2">Upload Product Images</FormLabel>
+              <FormLabel className="text-[#181818] font-bold block mb-2">
+                Upload Product Images ({previews.length}/10)
+              </FormLabel>
               <div className="flex gap-4 flex-wrap items-start">
-                <label className="block border-2 border-[#383535] rounded-md w-full max-w-[100px] aspect-square cursor-pointer hover:border-[#194a95] transition-colors shrink-0">
-                  <div className="flex items-center justify-center h-full">
-                    <Plus className="w-8 h-8 text-[#383535]" />
-                  </div>
-                  <input type="file" onChange={handleImageChange} multiple accept="image/*" className="hidden" />
-                </label>
+                {previews.length < 10 && (
+                  <label className="block border-2 border-[#383535] rounded-md w-full max-w-[100px] aspect-square cursor-pointer hover:border-[#194a95] transition-colors shrink-0">
+                    <div className="flex items-center justify-center h-full">
+                      <Plus className="w-8 h-8 text-[#383535]" />
+                    </div>
+                    <input type="file" onChange={handleImageChange} multiple accept="image/*" className="hidden" />
+                  </label>
+                )}
 
                 {previews.length > 0 && (
                   <div className="flex gap-4 flex-wrap flex-1">
@@ -500,10 +533,13 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                   </div>
                 )}
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                You can upload up to 10 images. {previews.length} of 10 used.
+              </p>
             </div>
 
-            {/* Application Areas */}
-            <div className="form-field relative z-50">
+            {/* Application Areas - Changed to checkbox buttons */}
+            <div className="form-field">
               <FormLabel className="text-[#181818] font-bold block mb-2">Application Areas</FormLabel>
               <FormField
                 control={form.control}
@@ -511,59 +547,33 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <div className="relative">
-                        <Select
-                          onValueChange={(value) => {
-                            const currentValues = field.value || []
-                            const newValues = currentValues.includes(value)
-                              ? currentValues.filter((v) => v !== value)
-                              : [...currentValues, value]
-                            field.onChange(newValues)
-                          }}
-                          value={field.value?.[field.value.length - 1] || ""}
-                        >
-                          <SelectTrigger className="w-full rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95] overflow-visible">
-                            <SelectValue>
-                              {field.value?.length
-                                ? `${field.value.length} area${field.value.length > 1 ? "s" : ""} selected`
-                                : "Select application areas"}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent className="bg-white border rounded-md shadow-lg z-50">
-                            {APPLICATION_AREAS.map((area) => (
-                              <SelectItem
-                                key={area}
-                                value={area}
-                                className={`px-3 py-2 cursor-pointer hover:bg-gray-50 ${
-                                  field.value?.includes(area) ? "bg-[#194a95] text-white" : ""
-                                }`}
-                              >
-                                {area}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {APPLICATION_AREAS.map((area) => {
+                          const isSelected = field.value?.includes(area) || false
+                          return (
+                            <button
+                              key={area}
+                              type="button"
+                              onClick={() => {
+                                const currentValues = field.value || []
+                                const newValues = isSelected
+                                  ? currentValues.filter((v) => v !== area)
+                                  : [...currentValues, area]
+                                field.onChange(newValues)
+                              }}
+                              className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
+                                isSelected
+                                  ? "bg-[#194a95] text-white border-[#194a95]"
+                                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                              } transition-colors`}
+                            >
+                              <span>{area}</span>
+                              {isSelected && <Check className="h-4 w-4 ml-2" />}
+                            </button>
+                          )
+                        })}
                       </div>
                     </FormControl>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {field.value?.map((area) => (
-                        <div
-                          key={area}
-                          className="bg-[#194a95] text-white px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                        >
-                          {area}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              field.onChange(field.value?.filter((v) => v !== area))
-                            }}
-                            className="hover:bg-[#0f3a7a] rounded-full p-1"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -656,3 +666,4 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
     </div>
   )
 }
+
