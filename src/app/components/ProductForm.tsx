@@ -229,31 +229,37 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
 
       const formData = new FormData()
 
+      // Log the form values before sending
+      console.log("Form values before sending:", values)
+
       // Convert applicationAreas array to string
       const formValues = {
         ...values,
         applicationAreas: values.applicationAreas.join(","),
       }
 
+      // Log the processed form values
+      console.log("Processed form values:", formValues)
+
       Object.entries(formValues).forEach(([key, value]) => {
-        if (value) formData.append(key, value.toString())
+        if (value !== undefined && value !== null) {
+          formData.append(key, value.toString())
+        }
       })
+
+      // Log the FormData entries without using for...of
+      console.log("Form data keys:", Object.fromEntries(Object.keys(formValues).map((key) => [key, formData.get(key)])))
 
       // Handle images based on mode
       if (mode === "edit") {
-        // For edit mode, we need to track which images are from the server
-        // and which are newly uploaded
         const existingImages = initialData?.image || []
         const existingImagesInPreviews = previews.filter((url) => existingImages.includes(url))
-
         formData.append("existingImages", JSON.stringify(existingImagesInPreviews))
 
-        // Add all new images
         if (images.length > 0) {
           images.forEach((image) => formData.append("images", image))
         }
       } else {
-        // For create mode, all images are new
         images.forEach((image) => formData.append("images", image))
       }
 
@@ -263,6 +269,9 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       const response = await axios.post<ApiResponse>(endpoint, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       })
+
+      // Log the response
+      console.log("Server response:", response.data)
 
       if (response.data.success) {
         if (mode === "create" && response.data.data?.postId) {
