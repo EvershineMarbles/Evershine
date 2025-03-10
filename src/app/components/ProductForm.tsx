@@ -66,6 +66,8 @@ interface ProductFormProps {
     category: string
     price: string
     quantityAvailable: string
+    qualityAvailabhhhh?: string // Add this line
+
     size?: string
     numberOfPieces?: string
     thickness?: string
@@ -86,6 +88,8 @@ const formSchema = z.object({
   size: z.string().optional(),
   numberOfPieces: z.string().optional(),
   thickness: z.string().optional(),
+  qualityAvailabhhhh: z.string().optional(), // Add this line
+
   applicationAreas: z.array(z.string()).min(1, "Please select at least one application area"),
   description: z.string().optional(),
 })
@@ -249,6 +253,33 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
 
       // Log the FormData entries without using for...of
       console.log("Form data keys:", Object.fromEntries(Object.keys(formValues).map((key) => [key, formData.get(key)])))
+
+      // Add this right after setting formData:
+      console.log("Form data details:", {
+        size: {
+          value: values.size,
+          type: typeof values.size,
+          isEmpty: values.size === "",
+          isUndefined: values.size === undefined,
+        },
+        numberOfPieces: {
+          value: values.numberOfPieces,
+          type: typeof values.numberOfPieces,
+          isEmpty: values.numberOfPieces === "",
+          isUndefined: values.numberOfPieces === undefined,
+        },
+        thickness: {
+          value: values.thickness,
+          type: typeof values.thickness,
+          isEmpty: values.thickness === "",
+          isUndefined: values.thickness === undefined,
+        },
+      })
+
+      // Ensure optional fields are always included
+      if (!formData.has("size")) formData.append("size", values.size || "")
+      if (!formData.has("numberOfPieces")) formData.append("numberOfPieces", values.numberOfPieces || "")
+      if (!formData.has("thickness")) formData.append("thickness", values.thickness || "")
 
       // Handle images based on mode
       if (mode === "edit") {
@@ -417,6 +448,30 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                   )}
                 />
               </div>
+
+
+              
+              <div className="form-field">
+          <FormLabel className="text-[#181818] font-bold block mb-2">Quality Availablelll</FormLabel>
+          <FormField
+                  control={form.control}
+                  name="qualityAvailabhhhh"
+                  render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Input
+                    placeholder="Enter quality"
+                    className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+
 
               <div className="form-field">
                 <FormLabel className="text-[#181818] font-bold block mb-2">Quality Available (in sqft)</FormLabel>
