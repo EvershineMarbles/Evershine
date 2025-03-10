@@ -31,7 +31,6 @@ interface Product {
   image: string[]
   postId: string
   quantityAvailable: number
-  qualityAvailabhhhh?: string // Add this line
   size?: string
   numberOfPieces?: number | null
   thickness?: string
@@ -75,15 +74,6 @@ const debugProductData = (data: any) => {
   console.log("  Is undefined:", data.thickness === undefined)
   console.log("  Property exists:", Object.prototype.hasOwnProperty.call(data, "thickness"))
 
-  // Detailed logging for qualityAvailabhhhh
-  console.log("QUALITY AVAILABHHHH FIELD:")
-  console.log("  Value:", data.qualityAvailabhhhh)
-  console.log("  Type:", typeof data.qualityAvailabhhhh)
-  console.log("  Is empty string:", data.qualityAvailabhhhh === "")
-  console.log("  Is null:", data.qualityAvailabhhhh === null)
-  console.log("  Is undefined:", data.qualityAvailabhhhh === undefined)
-  console.log("  Property exists:", Object.prototype.hasOwnProperty.call(data, "qualityAvailabhhhh"))
-
   console.log("All keys in product object:", Object.keys(data))
   console.log("=========================================")
 }
@@ -125,7 +115,6 @@ export default function ProductDetail() {
             size: productData.size !== undefined ? productData.size : "",
             numberOfPieces: productData.numberOfPieces !== undefined ? productData.numberOfPieces : null,
             thickness: productData.thickness !== undefined ? productData.thickness : "",
-            qualityAvailabhhhh: productData.qualityAvailabhhhh !== undefined ? productData.qualityAvailabhhhh : "",
           }
 
           console.log("Processed product with added fields:", processedProduct)
@@ -253,7 +242,6 @@ export default function ProductDetail() {
     console.log("Size:", product.size)
     console.log("Number of Pieces:", product.numberOfPieces)
     console.log("Thickness:", product.thickness)
-    console.log("Quality Availabhhhh:", product.qualityAvailabhhhh)
     console.log("=================================================")
   }
 
@@ -360,19 +348,13 @@ export default function ProductDetail() {
               <p className="text-xl font-bold mt-1">{product.quantityAvailable}</p>
             </div>
 
-            {/* Quality Availabhhhh */}
-            <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-500">Quality Availabhhhh</p>
-              <p className="text-xl font-bold mt-1">
-                {product.qualityAvailabhhhh && product.qualityAvailabhhhh !== "" ? product.qualityAvailabhhhh : "-"}
-              </p>
-            </div>
-
             {/* Size, No. of Pieces, and Thickness in 3 columns */}
             <div className="grid grid-cols-3 gap-4 pb-4 border-b border-gray-200">
               <div>
                 <p className="text-gray-500">Size</p>
-                <p className="text-lg font-bold mt-1">{product.size && product.size !== "" ? product.size : "-"}</p>
+                <p className="text-lg font-bold mt-1">
+                  {product.size !== undefined && product.size !== null && product.size !== "" ? product.size : "-"}
+                </p>
               </div>
               <div>
                 <p className="text-gray-500">No. of Pieces</p>
@@ -385,7 +367,9 @@ export default function ProductDetail() {
               <div>
                 <p className="text-gray-500">Thickness</p>
                 <p className="text-lg font-bold mt-1">
-                  {product.thickness && product.thickness !== "" ? product.thickness : "-"}
+                  {product.thickness !== undefined && product.thickness !== null && product.thickness !== ""
+                    ? product.thickness
+                    : "-"}
                 </p>
               </div>
             </div>

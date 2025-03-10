@@ -66,8 +66,6 @@ interface ProductFormProps {
     category: string
     price: string
     quantityAvailable: string
-    qualityAvailabhhhh?: string // Add this line
-
     size?: string
     numberOfPieces?: string
     thickness?: string
@@ -88,8 +86,6 @@ const formSchema = z.object({
   size: z.string().optional(),
   numberOfPieces: z.string().optional(),
   thickness: z.string().optional(),
-  qualityAvailabhhhh: z.string().optional(), // Add this line
-
   applicationAreas: z.array(z.string()).min(1, "Please select at least one application area"),
   description: z.string().optional(),
 })
@@ -448,30 +444,6 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                   )}
                 />
               </div>
-
-
-              
-              <div className="form-field">
-          <FormLabel className="text-[#181818] font-bold block mb-2">Quality Availablelll</FormLabel>
-          <FormField
-                  control={form.control}
-                  name="qualityAvailabhhhh"
-                  render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <Input
-                    placeholder="Enter quality"
-                    className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-
 
               <div className="form-field">
                 <FormLabel className="text-[#181818] font-bold block mb-2">Quality Available (in sqft)</FormLabel>
