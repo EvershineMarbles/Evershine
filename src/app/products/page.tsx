@@ -11,16 +11,6 @@ import Image from "next/image"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
-// Add global styles for form inputs
-const globalStyles = document.createElement("style")
-globalStyles.innerHTML = `
-  ::placeholder {
-    color: black !important;
-    opacity: 1;
-  }
-`
-document.head.appendChild(globalStyles)
-
 interface Product {
   _id: string
   name: string
@@ -41,20 +31,6 @@ export default function Products() {
 
   useEffect(() => {
     fetchProducts()
-
-    // Ensure placeholder styles are applied
-    const style = document.createElement("style")
-    style.innerHTML = `
-      input::placeholder {
-        color: black !important;
-        opacity: 1;
-      }
-    `
-    document.head.appendChild(style)
-
-    return () => {
-      document.head.removeChild(style)
-    }
   }, [])
 
   const fetchProducts = async () => {
@@ -150,7 +126,7 @@ export default function Products() {
                 placeholder="Search Product..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-3 w-full md:w-[300px] rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#194a95] focus:border-transparent placeholder:text-black"
+                className="pl-10 pr-4 py-3 w-full md:w-[300px] rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#194a95] focus:border-transparent [&::placeholder]:text-black"
               />
             </div>
           </div>
