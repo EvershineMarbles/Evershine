@@ -11,8 +11,15 @@ import Image from "next/image"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
-// Global styles for form inputs
-const inputStyles = "placeholder:text-gray-500 text-gray-900"
+// Add global styles for form inputs
+const globalStyles = document.createElement("style")
+globalStyles.innerHTML = `
+  ::placeholder {
+    color: black !important;
+    opacity: 1;
+  }
+`
+document.head.appendChild(globalStyles)
 
 interface Product {
   _id: string
@@ -34,6 +41,20 @@ export default function Products() {
 
   useEffect(() => {
     fetchProducts()
+
+    // Ensure placeholder styles are applied
+    const style = document.createElement("style")
+    style.innerHTML = `
+      input::placeholder {
+        color: black !important;
+        opacity: 1;
+      }
+    `
+    document.head.appendChild(style)
+
+    return () => {
+      document.head.removeChild(style)
+    }
   }, [])
 
   const fetchProducts = async () => {
@@ -129,7 +150,7 @@ export default function Products() {
                 placeholder="Search Product..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-3 w-full md:w-[300px] rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#194a95] focus:border-transparent placeholder:text-gray-500"
+                className="pl-10 pr-4 py-3 w-full md:w-[300px] rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#194a95] focus:border-transparent placeholder:text-black"
               />
             </div>
           </div>
@@ -230,7 +251,7 @@ export default function Products() {
           </div>
         )}
 
-        {/* Pagi */}
+        {/* Pagination */}
         {filteredProducts.length > 0 && (
           <div className="flex justify-end gap-4 mt-8">
             <button className="px-6 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors w-32">
@@ -243,33 +264,5 @@ export default function Products() {
         )}
       </div>
     </div>
-  )
-}
-
-// Add this function after the Products component but before the export
-export function FormInput({
-  type = "text",
-  placeholder,
-  name,
-  value,
-  onChange,
-  className = "",
-}: {
-  type?: string
-  placeholder: string
-  name: string
-  value?: string | number
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
-  className?: string
-}) {
-  return (
-    <input
-      type={type}
-      placeholder={placeholder}
-      name={name}
-      value={value}
-      onChange={onChange}
-      className={`w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#194a95] focus:border-transparent placeholder:text-gray-500 text-gray-900 ${className}`}
-    />
   )
 }
