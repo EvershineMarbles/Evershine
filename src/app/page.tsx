@@ -17,24 +17,26 @@ export default function LandingPage() {
         </div>
 
         {/* Buttons */}
-        <div className="w-full space-y-3">
+        <div className="w-full space-y-4">
           <button
-            onClick={() => router.push("/admin-panel")}
-            className="w-full py-4 bg-black text-white text-lg rounded hover:bg-black/90 transition-colors"
+            onClick={() => router.push("https://evershine-agent.vercel.app/")}
+            className="w-full py-4 bg-[#194a95] text-white text-lg font-medium rounded-md hover:bg-[#194a95]/90 transition-colors"
           >
             Admin Panel
           </button>
 
-          <button className="w-full py-4 bg-black text-white text-lg rounded opacity-90 cursor-not-allowed">
+          <button
+            onClick={() => router.push("/admin-panel")}
+            className="w-full py-4 bg-[#194a95] text-white text-lg font-medium rounded-md hover:bg-[#194a95]/90 transition-colors"
+          >
             Feeder
           </button>
 
-          <button className="w-full py-4 bg-black text-white text-lg rounded opacity-90 cursor-not-allowed">
-            Client Advisor
+          <button className="w-full py-4 bg-[#194a95] text-white text-lg font-medium rounded-md hover:bg-[#194a95]/90 transition-colors opacity-90 cursor-not-allowed">
+            Advisor
           </button>
         </div>
       </div>
     </div>
   )
 }
-
