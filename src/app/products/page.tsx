@@ -230,7 +230,7 @@ export default function Products() {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* Paginato */}
         {filteredProducts.length > 0 && (
           <div className="flex justify-end gap-4 mt-8">
             <button className="px-6 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors w-32">
