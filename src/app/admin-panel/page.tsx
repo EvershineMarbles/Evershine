@@ -10,7 +10,7 @@ export default function AdminPanel() {
         {/* Greeting */}
         <div className="space-y-1">
           <h1 className="text-3xl sm:text-4xl font-bold text-black">HELLO,</h1>
-          <h2 className="text-3xl sm:text-4xl font-bold text-black">Mr. Ankit</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold text-black">Feeder</h2>
         </div>
 
         {/* Navigation Buttons */}
@@ -26,7 +26,7 @@ export default function AdminPanel() {
             href="/agents" 
             className="bg-black text-white p-4 sm:p-6 rounded hover:bg-black/90 transition-colors flex items-center justify-center"
           >
-            <span className="text-lg sm:text-xl font-medium">All Agents</span>
+            <span className="text-lg sm:text-xl font-medium"></span>
           </Link>
         </div>
 
