@@ -16,7 +16,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Buttons */}
+        {/* Button */}
         <div className="w-full space-y-5">
           <button
             onClick={() => router.push("https://evershine-agent.vercel.app/admin/login")}
