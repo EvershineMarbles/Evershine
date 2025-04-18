@@ -18,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
+import QRCodeGenerator from "@/app/components/QRCodeGenerator"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -165,6 +166,8 @@ export default function ProductDetail() {
       setIsDeleting(false)
     }
   }
+
+  useEffect(() => {}, [])
 
   const handleThumbnailClick = (index: number) => {
     setCurrentImageIndex(index)
@@ -440,8 +443,21 @@ export default function ProductDetail() {
             </div>
           </div>
         </div>
+
+        {/* QR Code Section */}
+        <div className="max-w-6xl mx-auto mt-12 border-t pt-8">
+          <h2 className="text-2xl font-bold mb-6">Product QR Code</h2>
+          {product && (
+            <QRCodeGenerator
+              productId={product.postId}
+              productName={product.name}
+              category={product.category}
+              thickness={product.thickness}
+              size={product.size}
+            />
+          )}
+        </div>
       </div>
     </div>
   )
 }
-
