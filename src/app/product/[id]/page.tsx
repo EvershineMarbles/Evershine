@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Trash2 } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
@@ -89,6 +89,7 @@ export default function ProductDetail() {
   const [selectedThumbnail, setSelectedThumbnail] = useState(0)
   const [imageLoadError, setImageLoadError] = useState<boolean[]>([])
   const [isDeleting, setIsDeleting] = useState(false)
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
 
   // Update the useEffect to use this enhanced debugging
   useEffect(() => {
@@ -194,6 +195,52 @@ export default function ProductDetail() {
       setCurrentImageIndex((prev) => (prev === 0 ? product.image.length - 1 : prev - 1))
       setSelectedThumbnail((prev) => (prev === 0 ? product.image.length - 1 : prev - 1))
     }
+  }
+
+  const generateAndDownloadQR = async () => {
+    try {
+      if (!product) return
+
+      // If we already have a QR code URL, just download it
+      if (qrCodeUrl) {
+        downloadQRCode()
+        return
+      }
+
+      // Import QRCode dynamically to avoid SSR issues
+      const QRCode = (await import("qrcode")).default
+
+      // Generate the product URL
+      const productUrl = `${window.location.origin}/product/${product.postId}`
+
+      // Generate QR code
+      const qrCodeDataUrl = await QRCode.toDataURL(productUrl, {
+        width: 200,
+        margin: 1,
+        color: {
+          dark: "#000000",
+          light: "#ffffff",
+        },
+      })
+
+      setQrCodeUrl(qrCodeDataUrl)
+
+      // Download after generating
+      setTimeout(downloadQRCode, 100)
+    } catch (error) {
+      console.error("Error generating QR code:", error)
+    }
+  }
+
+  const downloadQRCode = () => {
+    if (!qrCodeUrl || !product) return
+
+    const link = document.createElement("a")
+    link.href = qrCodeUrl
+    link.download = `evershine-product-${product.postId}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   if (loading) {
@@ -400,17 +447,25 @@ export default function ProductDetail() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-4">
               <Button
                 onClick={() => router.push(`/edit-product/${product.postId}`)}
-                className="px-12 py-3 bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-md"
+                className="px-8 py-3 bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-md"
               >
                 Edit
               </Button>
 
+              <Button
+                onClick={generateAndDownloadQR}
+                className="px-8 py-3 bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-md flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download QR
+              </Button>
+
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="px-12 py-3" disabled={isDeleting}>
+                  <Button variant="destructive" className="px-8 py-3" disabled={isDeleting}>
                     {isDeleting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
