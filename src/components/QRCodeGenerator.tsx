@@ -124,8 +124,8 @@ export default function QRCodeGenerator({
         ctx.fill()
       }
 
-      // Draw the QR code
-      const qrCode = new Image()
+      // Draw the QR code - Fix: Use HTMLImageElement instead of Image constructor
+      const qrCode = document.createElement("img")
       qrCode.crossOrigin = "anonymous"
       qrCode.onload = () => {
         ctx.drawImage(qrCode, 400, 560, 150, 150)
