@@ -441,10 +441,10 @@ export default function ProductDetail() {
 
             {/* About Product - Modified to show only 2 lines initially */}
             <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-500">About Product</p>
+              <p className="text-gray-800">About Product</p>
               <div className="mt-1">
                 <p
-                  className={`text-xl font-bold ${!showFullDescription ? "line-clamp-2" : ""} transition-all duration-200`}
+                  className={`text-xl font-normal ${!showFullDescription ? "line-clamp-2" : ""} transition-all duration-200`}
                 >
                   {product.description || "Product mainly used for countertop"}
                 </p>
