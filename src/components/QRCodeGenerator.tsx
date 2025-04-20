@@ -56,7 +56,7 @@ export default function QRCodeGenerator({
       canvas.width = 600
       canvas.height = 900
 
-      // Load the template image - Fix: Use HTMLImageElement instead of Image constructor
+      // Load the template image
       const templateImage = document.createElement("img")
       templateImage.crossOrigin = "anonymous"
       templateImage.src = "/assets/qr-template.png"
@@ -65,24 +65,12 @@ export default function QRCodeGenerator({
         // Draw the template image on the canvas
         ctx.drawImage(templateImage, 0, 0, canvas.width, canvas.height)
 
-        // Fill in the product details
-        ctx.fillStyle = "#000000"
-        ctx.font = "bold 18px Arial"
-        ctx.textAlign = "left"
-
-        // Fill in the form fields
-        ctx.fillText(category, 350, 313) // Quality
-        ctx.fillText(productId.slice(-6), 200, 363) // S.No.
-        ctx.fillText(thickness || "-", 460, 363) // Thickness
-        ctx.fillText(size || "-", 350, 413) // Size
-        ctx.fillText(productId, 350, 463) // Code
-
-        // Load and draw the QR code in the white space - Fix: Use HTMLImageElement
+        // Load and draw the QR code in the white space
         const qrCode = document.createElement("img")
         qrCode.crossOrigin = "anonymous"
         qrCode.onload = () => {
-          // Draw QR code in the white space at bottom right
-          ctx.drawImage(qrCode, 432, 678, 150, 150)
+          // Draw QR code in the white space at bottom right - updated position
+          ctx.drawImage(qrCode, 557, 772, 180, 180)
 
           // Convert canvas to data URL
           const dataUrl = canvas.toDataURL("image/png")
