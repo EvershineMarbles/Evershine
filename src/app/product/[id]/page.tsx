@@ -18,7 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import QRCodeGenerator from "@/app/components/QRCodeGenerator"
+import QRCodeGenerator from "@/components/QRCodeGenerator"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
