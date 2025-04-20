@@ -81,8 +81,8 @@ export default function QRCodeGenerator({
         const qrCode = document.createElement("img")
         qrCode.crossOrigin = "anonymous"
         qrCode.onload = () => {
-          // Draw QR code in the white space at bottom right
-          ctx.drawImage(qrCode, 502, 783, 150, 150)
+          // Draw QR code in the white space at bottom right - adjusted position
+          ctx.drawImage(qrCode, 520, 720, 150, 150)
 
           // Convert canvas to data URL
           const dataUrl = canvas.toDataURL("image/png")
