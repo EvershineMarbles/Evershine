@@ -444,7 +444,7 @@ export default function ProductDetail() {
               <p className="text-gray-500">About Product</p>
               <div className="mt-1">
                 <p
-                  className={`text-gray-700 ${!showFullDescription ? "line-clamp-2" : ""} transition-all duration-200`}
+                  className={`text-xl font-bold ${!showFullDescription ? "line-clamp-2" : ""} transition-all duration-200`}
                 >
                   {product.description || "Product mainly used for countertop"}
                 </p>
@@ -474,14 +474,6 @@ export default function ProductDetail() {
                 className="px-8 py-3 bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-md"
               >
                 Edit
-              </Button>
-
-              <Button
-                onClick={generateAndDownloadQR}
-                className="px-8 py-3 bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-md flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Download QR
               </Button>
 
               <AlertDialog>
