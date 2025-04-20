@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState } from "react"
 import Image from "next/image"
 import QRCode from "qrcode"
-import { Download, Loader2 } from 'lucide-react'
+import { Download, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface QRCodeGeneratorProps {
@@ -33,7 +33,7 @@ export default function QRCodeGenerator({
   const generateQRCode = async () => {
     try {
       setIsGenerating(true)
-      
+
       // Generate QR code for the product URL
       const productUrl = `${window.location.origin}/product/${productId}`
       const qrCodeDataUrl = await QRCode.toDataURL(productUrl, {
@@ -44,46 +44,46 @@ export default function QRCodeGenerator({
           light: "#ffffff",
         },
       })
-      
+
       // Create the branded QR code card
       const canvas = canvasRef.current
       if (!canvas) return
-      
-      const ctx = canvas.getContext('2d')
+
+      const ctx = canvas.getContext("2d")
       if (!ctx) return
-      
+
       // Set canvas dimensions to match the template image
       canvas.width = 600
       canvas.height = 900
-      
-      // Load the template image
-      const templateImage = new Image()
+
+      // Load the template image - Fix: Use HTMLImageElement instead of Image constructor
+      const templateImage = document.createElement("img")
       templateImage.crossOrigin = "anonymous"
       templateImage.src = "/assets/qr-template.png"
-      
+
       templateImage.onload = () => {
         // Draw the template image on the canvas
         ctx.drawImage(templateImage, 0, 0, canvas.width, canvas.height)
-        
+
         // Fill in the product details
         ctx.fillStyle = "#000000"
         ctx.font = "bold 18px Arial"
         ctx.textAlign = "left"
-        
+
         // Fill in the form fields
         ctx.fillText(category, 350, 313) // Quality
         ctx.fillText(productId.slice(-6), 200, 363) // S.No.
         ctx.fillText(thickness || "-", 460, 363) // Thickness
         ctx.fillText(size || "-", 350, 413) // Size
         ctx.fillText(productId, 350, 463) // Code
-        
-        // Load and draw the QR code in the white space
-        const qrCode = new Image()
+
+        // Load and draw the QR code in the white space - Fix: Use HTMLImageElement
+        const qrCode = document.createElement("img")
         qrCode.crossOrigin = "anonymous"
         qrCode.onload = () => {
           // Draw QR code in the white space at bottom right
           ctx.drawImage(qrCode, 432, 678, 150, 150)
-          
+
           // Convert canvas to data URL
           const dataUrl = canvas.toDataURL("image/png")
           setQrCodeUrl(dataUrl)
@@ -91,7 +91,7 @@ export default function QRCodeGenerator({
         }
         qrCode.src = qrCodeDataUrl
       }
-      
+
       templateImageRef.current = templateImage
     } catch (error) {
       console.error("Error generating QR code:", error)
@@ -101,7 +101,7 @@ export default function QRCodeGenerator({
 
   const handleDownload = () => {
     if (!qrCodeUrl) return
-    
+
     const link = document.createElement("a")
     link.href = qrCodeUrl
     link.download = `evershine-product-${productId}.png`
@@ -113,7 +113,7 @@ export default function QRCodeGenerator({
   return (
     <div className="flex flex-col items-center">
       <canvas ref={canvasRef} style={{ display: "none" }} />
-      
+
       {isGenerating ? (
         <div className="flex flex-col items-center justify-center p-8">
           <Loader2 className="h-8 w-8 animate-spin text-[#194a95] mb-4" />
@@ -122,16 +122,16 @@ export default function QRCodeGenerator({
       ) : (
         <>
           <div className="mb-6 border rounded-lg overflow-hidden shadow-lg">
-            <Image 
-              src={qrCodeUrl || "/placeholder.svg"} 
-              alt="Product QR Code" 
-              width={300} 
-              height={450} 
+            <Image
+              src={qrCodeUrl || "/placeholder.svg"}
+              alt="Product QR Code"
+              width={300}
+              height={450}
               className="object-contain"
             />
           </div>
-          <Button 
-            onClick={handleDownload} 
+          <Button
+            onClick={handleDownload}
             className="bg-[#194a95] hover:bg-[#0f3a7a] text-white flex items-center gap-2 px-6 py-2"
           >
             <Download className="w-5 h-5" />
