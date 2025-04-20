@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Trash2 } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Trash2, ChevronDown, ChevronUp } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,7 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import QRCodeGenerator from "@/components/QRCodeGenerator"
+import QRCodeGenerator from "@/app/components/QRCodeGenerator"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -90,6 +90,7 @@ export default function ProductDetail() {
   const [imageLoadError, setImageLoadError] = useState<boolean[]>([])
   const [isDeleting, setIsDeleting] = useState(false)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
+  const [showFullDescription, setShowFullDescription] = useState(false)
 
   // Update the useEffect to use this enhanced debugging
   useEffect(() => {
@@ -167,8 +168,6 @@ export default function ProductDetail() {
       setIsDeleting(false)
     }
   }
-
-  useEffect(() => {}, [])
 
   const handleThumbnailClick = (index: number) => {
     setCurrentImageIndex(index)
@@ -440,10 +439,32 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* About Product */}
+            {/* About Product - Modified to show only 2 lines initially */}
             <div className="pb-4 border-b border-gray-200">
               <p className="text-gray-500">About Product</p>
-              <p className="text-xl font-bold mt-1">{product.description || "Product mainly used for countertop"}</p>
+              <div className="mt-1">
+                <p
+                  className={`text-gray-700 ${!showFullDescription ? "line-clamp-2" : ""} transition-all duration-200`}
+                >
+                  {product.description || "Product mainly used for countertop"}
+                </p>
+                {(product.description?.length || 0) > 80 && (
+                  <button
+                    onClick={() => setShowFullDescription(!showFullDescription)}
+                    className="text-[#194a95] hover:text-[#0f3a7a] mt-1 text-sm flex items-center"
+                  >
+                    {showFullDescription ? (
+                      <>
+                        Show less <ChevronUp className="ml-1 h-4 w-4" />
+                      </>
+                    ) : (
+                      <>
+                        View more <ChevronDown className="ml-1 h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Action Buttons */}
