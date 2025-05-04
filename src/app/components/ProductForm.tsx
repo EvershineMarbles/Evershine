@@ -562,73 +562,77 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               <div className="md:col-span-5">
                 <FormLabel className="text-[#181818] font-bold block mb-2 text-lg">Size</FormLabel>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
+                <div className="flex items-center gap-1">
+                  <div className="w-[100px]">
                     <FormField
                       control={form.control}
                       name="sizeLength"
                       render={({ field }) => (
                         <FormItem className="mb-0">
                           <FormControl>
-                            <Input
-                              type="text"
-                              inputMode="numeric"
-                              className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95] px-4"
-                              {...field}
-                              onChange={(e) => {
-                                field.onChange(e)
-                                // Update the size field with the combined value
-                                const length = e.target.value
-                                const height = form.getValues("sizeHeight") || ""
-                                if (length && height) {
-                                  form.setValue("size", `${length}x${height}`)
-                                } else {
-                                  form.setValue("size", "")
-                                }
-                              }}
-                            />
+                            <div className="relative">
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95] pl-8"
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e)
+                                  // Update the size field with the combined value
+                                  const length = e.target.value
+                                  const height = form.getValues("sizeHeight") || ""
+                                  if (length && height) {
+                                    form.setValue("size", `${length}x${height}`)
+                                  } else {
+                                    form.setValue("size", "")
+                                  }
+                                }}
+                              />
+                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg">
+                                L
+                              </span>
+                            </div>
                           </FormControl>
-                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg pointer-events-none">
-                            L
-                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
 
-                  <div className="flex items-center justify-center w-8">
-                    <span className="text-gray-500 text-2xl font-bold">×</span>
+                  <div className="flex items-center justify-center w-5">
+                    <span className="text-gray-500 text-xl font-bold">×</span>
                   </div>
 
-                  <div className="relative flex-1">
+                  <div className="w-[100px]">
                     <FormField
                       control={form.control}
                       name="sizeHeight"
                       render={({ field }) => (
                         <FormItem className="mb-0">
                           <FormControl>
-                            <Input
-                              type="text"
-                              inputMode="numeric"
-                              className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95] px-4"
-                              {...field}
-                              onChange={(e) => {
-                                field.onChange(e)
-                                // Update the size field with the combined value
-                                const height = e.target.value
-                                const length = form.getValues("sizeLength") || ""
-                                if (length && height) {
-                                  form.setValue("size", `${length}x${height}`)
-                                } else {
-                                  form.setValue("size", "")
-                                }
-                              }}
-                            />
+                            <div className="relative">
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95] pl-8"
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e)
+                                  // Update the size field with the combined value
+                                  const height = e.target.value
+                                  const length = form.getValues("sizeLength") || ""
+                                  if (length && height) {
+                                    form.setValue("size", `${length}x${height}`)
+                                  } else {
+                                    form.setValue("size", "")
+                                  }
+                                }}
+                              />
+                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg">
+                                H
+                              </span>
+                            </div>
                           </FormControl>
-                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg pointer-events-none">
-                            H
-                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -642,7 +646,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                       <FormItem>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="rounded-md border-[#e3e3e3] h-14 focus:ring-[#194a95] w-28 text-lg">
+                            <SelectTrigger className="rounded-md border-[#e3e3e3] h-14 focus:ring-[#194a95] w-20 text-lg">
                               <SelectValue placeholder="Unit" />
                             </SelectTrigger>
                           </FormControl>
@@ -692,7 +696,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                         <Input
                           type="text"
                           inputMode="numeric"
-                          className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95]"
+                          className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95] w-[100px]"
                           {...field}
                         />
                       </FormControl>
