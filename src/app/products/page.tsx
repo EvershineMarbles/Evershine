@@ -161,8 +161,8 @@ export default function Products() {
           Showing {filteredProducts.length} of {products.length} products
         </p>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 mb-8">
+        {/* Products Grid - Modified to show 3 products per row on tablet */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 mb-8">
           {filteredProducts.map((product) => (
             <div
               key={product._id}

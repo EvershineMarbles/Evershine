@@ -34,6 +34,14 @@ export default function QRCodeGenerator({
     generateQRCode()
   }, [productId])
 
+  // Helper function to capitalize each word in a string
+  const capitalizeWords = (str: string): string => {
+    return str
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ")
+  }
+
   const generateQRCode = async () => {
     try {
       setIsGenerating(true)
@@ -73,8 +81,8 @@ export default function QRCodeGenerator({
         const qrCode = document.createElement("img")
         qrCode.crossOrigin = "anonymous"
         qrCode.onload = () => {
-          // Draw QR code in the white space at bottom right - adjusted position
-          ctx.drawImage(qrCode, 380, 640, 150, 150)
+          // Draw QR code in the white space at bottom right - moved higher up
+          ctx.drawImage(qrCode, 380, 620, 150, 150)
 
           // Add product name directly below the QR code in the white area
           ctx.font = "bold 16px Arial"
@@ -83,11 +91,14 @@ export default function QRCodeGenerator({
 
           // Position the text below the QR code in the white area
           const qrCodeCenterX = 380 + 75 // QR code X position + half width
-          const textY = 810 // Position below the QR code
+          const textY = 790 // Position below the QR code, adjusted for the new QR position
+
+          // Capitalize the product name
+          const capitalizedName = capitalizeWords(productName)
 
           // Wrap text if needed
           const maxWidth = 150 // Same width as QR code
-          const words = productName.split(" ")
+          const words = capitalizedName.split(" ")
           let line = ""
           let y = textY
 
