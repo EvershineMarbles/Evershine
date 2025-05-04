@@ -18,8 +18,6 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card } from "@/components/ui/card"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -563,8 +561,8 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
             <div className="grid grid-cols-12 gap-2">
               <div className="col-span-5">
                 <FormLabel className="text-[#181818] font-bold block mb-2 text-lg">Size</FormLabel>
-                <div className="flex items-center gap-1">
-                  <div className="w-[80px]">
+                <div className="flex items-center gap-3">
+                  <div className="w-[100px]">
                     <FormField
                       control={form.control}
                       name="sizeLength"
@@ -600,7 +598,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                     <span className="text-gray-500 text-xl font-bold">×</span>
                   </div>
 
-                  <div className="w-[80px]">
+                  <div className="w-[100px]">
                     <FormField
                       control={form.control}
                       name="sizeHeight"
@@ -639,7 +637,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                       <FormItem>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="rounded-md border-[#e3e3e3] h-14 focus:ring-[#194a95] w-24 text-lg">
+                            <SelectTrigger className="rounded-md border-[#e3e3e3] h-14 focus:ring-[#194a95] w-16 text-lg">
                               <SelectValue placeholder="Unit" />
                             </SelectTrigger>
                           </FormControl>
@@ -704,7 +702,6 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 <div className="flex justify-between items-center mb-2">
                   <FormLabel className="text-[#181818] font-bold text-lg">Quality Available (in sqft)</FormLabel>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500">Auto</span>
                     <Switch
                       checked={autoCalculateQuantity}
                       onCheckedChange={setAutoCalculateQuantity}
@@ -752,22 +749,26 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex flex-wrap items-center gap-2"
-                      >
-                        {["Polish", "Leather", "Flute", "River", "Satin", "Dual"].map((finish) => (
-                          <Label
-                            key={finish}
-                            htmlFor={`finish-${finish.toLowerCase()}`}
-                            className="border cursor-pointer rounded-md p-2 flex items-center gap-2 [&:has(:checked)]:bg-muted"
-                          >
-                            <RadioGroupItem id={`finish-${finish.toLowerCase()}`} value={finish.toLowerCase()} />
-                            {finish}
-                          </Label>
-                        ))}
-                      </RadioGroup>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {["Polish", "Leather", "Flute", "River", "Satin", "Dual"].map((finish) => {
+                          const isSelected = field.value === finish.toLowerCase()
+                          return (
+                            <button
+                              key={finish}
+                              type="button"
+                              onClick={() => field.onChange(finish.toLowerCase())}
+                              className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
+                                isSelected
+                                  ? "bg-[#194a95] text-white border-[#194a95]"
+                                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                              } transition-colors`}
+                            >
+                              <span>{finish}</span>
+                              {isSelected && <Check className="h-4 w-4 ml-2" />}
+                            </button>
+                          )
+                        })}
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
