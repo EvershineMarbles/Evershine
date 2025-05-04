@@ -91,7 +91,7 @@ const formSchema = z.object({
   size: z.string().optional(),
   sizeLength: z.string().optional(),
   sizeHeight: z.string().optional(),
-  sizeUnit: z.string().default("inches"),
+  sizeUnit: z.string().default("in"),
   numberOfPieces: z.string().optional(),
   thickness: z.string().optional(),
   finishes: z.string().optional(),
@@ -128,6 +128,8 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
   const [autoCalculateQuantity, setAutoCalculateQuantity] = useState(true)
   const [sizeParseError, setSizeParseError] = useState<string | null>(null)
   const [calculationPreview, setCalculationPreview] = useState<string | null>(null)
+  const [lengthFocused, setLengthFocused] = useState(false)
+  const [heightFocused, setHeightFocused] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -139,7 +141,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       size: initialData?.size || "",
       sizeLength: initialData?.size ? initialData.size.split(/[x*-]/)[0] : "",
       sizeHeight: initialData?.size ? initialData.size.split(/[x*-]/)[1] : "",
-      sizeUnit: initialData?.sizeUnit || "inches",
+      sizeUnit: initialData?.sizeUnit || "in",
       numberOfPieces: initialData?.numberOfPieces || "",
       thickness: initialData?.thickness || "",
       finishes: initialData?.finishes || "",
@@ -187,7 +189,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
     let calculatedQuantity: number
     let formula: string
 
-    if (sizeUnit === "inches") {
+    if (sizeUnit === "in") {
       // For inches: (length * height * numberOfPieces) / 144 = quantity available
       calculatedQuantity = (length * height * pieces) / 144
       formula = `(${length} × ${height} × ${pieces}) ÷ 144 = ${calculatedQuantity.toFixed(2)} sqft`
@@ -366,7 +368,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       if (!formData.has("size")) formData.append("size", values.size || "")
       if (!formData.has("numberOfPieces")) formData.append("numberOfPieces", values.numberOfPieces || "")
       if (!formData.has("thickness")) formData.append("thickness", values.thickness || "")
-      if (!formData.has("sizeUnit")) formData.append("sizeUnit", values.sizeUnit || "inches")
+      if (!formData.has("sizeUnit")) formData.append("sizeUnit", values.sizeUnit || "in")
       if (!formData.has("finishes")) formData.append("finishes", values.finishes || "")
 
       // Handle images based on mode
@@ -559,8 +561,8 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
             </div>
 
             {/* Size with Unit, Number of Pieces, and Quantity */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-              <div className="md:col-span-5">
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-5">
                 <FormLabel className="text-[#181818] font-bold block mb-2 text-lg">Size</FormLabel>
                 <div className="flex items-center gap-1">
                   <div className="w-[100px]">
@@ -570,28 +572,36 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                       render={({ field }) => (
                         <FormItem className="mb-0">
                           <FormControl>
-                            <div className="relative">
-                              <Input
-                                type="text"
-                                inputMode="numeric"
-                                className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95] pl-8"
-                                {...field}
-                                onChange={(e) => {
-                                  field.onChange(e)
-                                  // Update the size field with the combined value
-                                  const length = e.target.value
-                                  const height = form.getValues("sizeHeight") || ""
-                                  if (length && height) {
-                                    form.setValue("size", `${length}x${height}`)
-                                  } else {
-                                    form.setValue("size", "")
-                                  }
-                                }}
-                              />
-                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg">
-                                L
-                              </span>
-                            </div>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="L"
+                              className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95]"
+                              onFocus={() => setLengthFocused(true)}
+                              onBlur={() => {
+                                setLengthFocused(false)
+                                // Update the size field with the combined value
+                                const length = field.value
+                                const height = form.getValues("sizeHeight") || ""
+                                if (length && height) {
+                                  form.setValue("size", `${length}x${height}`)
+                                } else {
+                                  form.setValue("size", "")
+                                }
+                              }}
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e)
+                                // Update the size field with the combined value
+                                const length = e.target.value
+                                const height = form.getValues("sizeHeight") || ""
+                                if (length && height) {
+                                  form.setValue("size", `${length}x${height}`)
+                                } else {
+                                  form.setValue("size", "")
+                                }
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -610,28 +620,36 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                       render={({ field }) => (
                         <FormItem className="mb-0">
                           <FormControl>
-                            <div className="relative">
-                              <Input
-                                type="text"
-                                inputMode="numeric"
-                                className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95] pl-8"
-                                {...field}
-                                onChange={(e) => {
-                                  field.onChange(e)
-                                  // Update the size field with the combined value
-                                  const height = e.target.value
-                                  const length = form.getValues("sizeLength") || ""
-                                  if (length && height) {
-                                    form.setValue("size", `${length}x${height}`)
-                                  } else {
-                                    form.setValue("size", "")
-                                  }
-                                }}
-                              />
-                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg">
-                                H
-                              </span>
-                            </div>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="H"
+                              className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95]"
+                              onFocus={() => setHeightFocused(true)}
+                              onBlur={() => {
+                                setHeightFocused(false)
+                                // Update the size field with the combined value
+                                const height = field.value
+                                const length = form.getValues("sizeLength") || ""
+                                if (length && height) {
+                                  form.setValue("size", `${length}x${height}`)
+                                } else {
+                                  form.setValue("size", "")
+                                }
+                              }}
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e)
+                                // Update the size field with the combined value
+                                const height = e.target.value
+                                const length = form.getValues("sizeLength") || ""
+                                if (length && height) {
+                                  form.setValue("size", `${length}x${height}`)
+                                } else {
+                                  form.setValue("size", "")
+                                }
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -646,7 +664,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                       <FormItem>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="rounded-md border-[#e3e3e3] h-14 focus:ring-[#194a95] w-20 text-lg">
+                            <SelectTrigger className="rounded-md border-[#e3e3e3] h-14 focus:ring-[#194a95] w-16 text-lg">
                               <SelectValue placeholder="Unit" />
                             </SelectTrigger>
                           </FormControl>
@@ -655,8 +673,8 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                             position="popper"
                             sideOffset={5}
                           >
-                            <SelectItem value="inches" className="text-lg">
-                              inches
+                            <SelectItem value="in" className="text-lg">
+                              in
                             </SelectItem>
                             <SelectItem value="cm" className="text-lg">
                               cm
@@ -685,7 +703,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 />
               </div>
 
-              <div className="md:col-span-2">
+              <div className="col-span-2">
                 <FormLabel className="text-[#181818] font-bold block mb-2 text-lg">Pieces</FormLabel>
                 <FormField
                   control={form.control}
@@ -696,6 +714,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                         <Input
                           type="text"
                           inputMode="numeric"
+                          placeholder="Pieces"
                           className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95] w-[100px]"
                           {...field}
                         />
@@ -706,7 +725,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 />
               </div>
 
-              <div className="md:col-span-5">
+              <div className="col-span-5">
                 <div className="flex justify-between items-center mb-2">
                   <FormLabel className="text-[#181818] font-bold text-lg">Quality Available (in sqft)</FormLabel>
                   <div className="flex items-center gap-2">
@@ -742,9 +761,6 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                           </div>
                         )}
                       </div>
-                      {calculationPreview && autoCalculateQuantity && (
-                        <p className="text-sm text-gray-500 mt-1">Calculation: {calculationPreview}</p>
-                      )}
                       <FormMessage />
                     </FormItem>
                   )}
