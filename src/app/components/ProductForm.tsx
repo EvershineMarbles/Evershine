@@ -443,9 +443,27 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
   }
 
   return (
-    
     <div className="max-w-3xl mx-auto bg-white min-h-screen">
       {/* Header */}
+
+     
+      <div className="sticky top-0 z-50 bg-white">
+        <div className="p-4">
+          <button
+            onClick={() => router.back()}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-6 w-6" />
+          </button>
+
+          <div className="text-center mt-4 mb-6">
+            <h1 className="text-3xl font-bold text-[#181818]">
+              {mode === "edit" ? "Edit Product" : "Add New Product"}
+            </h1>
+          </div>
+        </div>
+      </div>
 
       {/* Form */}
       <div className="px-6 pb-10">
