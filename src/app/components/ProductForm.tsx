@@ -21,7 +21,6 @@ import { Card } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -562,7 +561,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
             {/* Size with Unit, Number of Pieces, and Quantity */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               <div className="md:col-span-5">
-                <FormLabel className="text-[#181818] font-bold block mb-2">Size</FormLabel>
+                <FormLabel className="text-[#181818] font-bold block mb-2 text-lg">Size</FormLabel>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <FormField
@@ -571,37 +570,35 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                       render={({ field }) => (
                         <FormItem className="mb-0">
                           <FormControl>
-                            <div className="relative">
-                              <Input
-                                type="number"
-                                placeholder="Length"
-                                className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95] pl-8"
-                                {...field}
-                                onChange={(e) => {
-                                  field.onChange(e)
-                                  // Update the size field with the combined value
-                                  const length = e.target.value
-                                  const height = form.getValues("sizeHeight") || ""
-                                  if (length && height) {
-                                    form.setValue("size", `${length}x${height}`)
-                                  } else {
-                                    form.setValue("size", "")
-                                  }
-                                }}
-                              />
-                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                                L
-                              </span>
-                            </div>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95] px-4"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e)
+                                // Update the size field with the combined value
+                                const length = e.target.value
+                                const height = form.getValues("sizeHeight") || ""
+                                if (length && height) {
+                                  form.setValue("size", `${length}x${height}`)
+                                } else {
+                                  form.setValue("size", "")
+                                }
+                              }}
+                            />
                           </FormControl>
+                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg pointer-events-none">
+                            L
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
 
-                  <div className="flex items-center justify-center w-6">
-                    <span className="text-gray-500 text-lg font-bold">×</span>
+                  <div className="flex items-center justify-center w-8">
+                    <span className="text-gray-500 text-2xl font-bold">×</span>
                   </div>
 
                   <div className="relative flex-1">
@@ -611,29 +608,27 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                       render={({ field }) => (
                         <FormItem className="mb-0">
                           <FormControl>
-                            <div className="relative">
-                              <Input
-                                type="number"
-                                placeholder="Height"
-                                className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95] pl-8"
-                                {...field}
-                                onChange={(e) => {
-                                  field.onChange(e)
-                                  // Update the size field with the combined value
-                                  const height = e.target.value
-                                  const length = form.getValues("sizeLength") || ""
-                                  if (length && height) {
-                                    form.setValue("size", `${length}x${height}`)
-                                  } else {
-                                    form.setValue("size", "")
-                                  }
-                                }}
-                              />
-                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                                H
-                              </span>
-                            </div>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95] px-4"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e)
+                                // Update the size field with the combined value
+                                const height = e.target.value
+                                const length = form.getValues("sizeLength") || ""
+                                if (length && height) {
+                                  form.setValue("size", `${length}x${height}`)
+                                } else {
+                                  form.setValue("size", "")
+                                }
+                              }}
+                            />
                           </FormControl>
+                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg pointer-events-none">
+                            H
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -647,7 +642,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                       <FormItem>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95] w-24">
+                            <SelectTrigger className="rounded-md border-[#e3e3e3] h-14 focus:ring-[#194a95] w-28 text-lg">
                               <SelectValue placeholder="Unit" />
                             </SelectTrigger>
                           </FormControl>
@@ -656,8 +651,12 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                             position="popper"
                             sideOffset={5}
                           >
-                            <SelectItem value="inches">inches</SelectItem>
-                            <SelectItem value="cm">cm</SelectItem>
+                            <SelectItem value="inches" className="text-lg">
+                              inches
+                            </SelectItem>
+                            <SelectItem value="cm" className="text-lg">
+                              cm
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -682,8 +681,8 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 />
               </div>
 
-              <div className="md:col-span-1">
-                <FormLabel className="text-[#181818] font-bold block mb-2">Pieces</FormLabel>
+              <div className="md:col-span-2">
+                <FormLabel className="text-[#181818] font-bold block mb-2 text-lg">Pieces</FormLabel>
                 <FormField
                   control={form.control}
                   name="numberOfPieces"
@@ -691,9 +690,9 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                     <FormItem>
                       <FormControl>
                         <Input
-                          type="number"
-                          placeholder="Qty"
-                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95] w-full"
+                          type="text"
+                          inputMode="numeric"
+                          className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95]"
                           {...field}
                         />
                       </FormControl>
@@ -703,30 +702,17 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 />
               </div>
 
-              <div className="md:col-span-6">
+              <div className="md:col-span-5">
                 <div className="flex justify-between items-center mb-2">
-                  <FormLabel className="text-[#181818] font-bold">Quality Available (in sqft)</FormLabel>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">Auto Calculate</span>
-                          <Switch
-                            checked={autoCalculateQuantity}
-                            onCheckedChange={setAutoCalculateQuantity}
-                            className="data-[state=checked]:bg-[#194a95]"
-                          />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>
-                          {form.getValues("sizeUnit") === "inches"
-                            ? "Formula: (length × height × pieces) ÷ 144"
-                            : "Formula: (length × height × pieces) ÷ 929"}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <FormLabel className="text-[#181818] font-bold text-lg">Quality Available (in sqft)</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Auto Calculate</span>
+                    <Switch
+                      checked={autoCalculateQuantity}
+                      onCheckedChange={setAutoCalculateQuantity}
+                      className="data-[state=checked]:bg-[#194a95]"
+                    />
+                  </div>
                 </div>
                 <FormField
                   control={form.control}
@@ -736,9 +722,10 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                       <div className="relative">
                         <FormControl>
                           <Input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
                             placeholder="in sqft"
-                            className={`rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95] ${
+                            className={`rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95] ${
                               autoCalculateQuantity ? "bg-gray-50" : ""
                             }`}
                             readOnly={autoCalculateQuantity}
@@ -747,12 +734,12 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                         </FormControl>
                         {autoCalculateQuantity && (
                           <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                            <Calculator className="h-4 w-4" />
+                            <Calculator className="h-5 w-5" />
                           </div>
                         )}
                       </div>
                       {calculationPreview && autoCalculateQuantity && (
-                        <p className="text-xs text-gray-500 mt-1">Calculation: {calculationPreview}</p>
+                        <p className="text-sm text-gray-500 mt-1">Calculation: {calculationPreview}</p>
                       )}
                       <FormMessage />
                     </FormItem>
