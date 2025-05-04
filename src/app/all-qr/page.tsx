@@ -10,7 +10,6 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { toast } from "sonner"
-import QRCodeGenerator from "@/components/QRCodeGenerator"
 import QRCode from "qrcode"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -34,7 +33,7 @@ export default function AllQR() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [previewProduct, setPreviewProduct] = useState<Product | null>(null)
+  // const [previewProduct, setPreviewProduct] = useState<Product | null>(null)
   const [priceValues, setPriceValues] = useState<Record<string, string>>({})
   const [updatingPrice, setUpdatingPrice] = useState<Record<string, boolean>>({})
   const [generatingQR, setGeneratingQR] = useState<Record<string, boolean>>({})
@@ -69,13 +68,13 @@ export default function AllQR() {
     return product.name.toLowerCase().includes(searchQuery.toLowerCase())
   })
 
-  const handlePreviewQR = (product: Product) => {
-    setPreviewProduct(product)
-  }
+  // const handlePreviewQR = (product: Product) => {
+  //   setPreviewProduct(product)
+  // }
 
-  const closePreview = () => {
-    setPreviewProduct(null)
-  }
+  // const closePreview = () => {
+  //   setPreviewProduct(null)
+  // }
 
   const handlePriceChange = (productId: string, value: string) => {
     setPriceValues((prev) => ({
@@ -403,14 +402,11 @@ export default function AllQR() {
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-right">
                     <div className="flex justify-end space-x-2">
-                      <Button
-                        onClick={() => handlePreviewQR(product)}
-                        variant="outline"
-                        size="sm"
-                        className="text-[#194a95] border-[#194a95]"
-                      >
-                        Preview
-                      </Button>
+                      <Link href={`/product/${product.postId}`} passHref>
+                        <Button variant="outline" size="sm" className="text-[#194a95] border-[#194a95]">
+                          Preview
+                        </Button>
+                      </Link>
                       <Button
                         onClick={() => generateAndDownloadQR(product)}
                         size="sm"
@@ -442,7 +438,7 @@ export default function AllQR() {
       </div>
 
       {/* QR Code Preview Modal */}
-      {previewProduct && (
+      {/* {previewProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-4">
@@ -471,7 +467,7 @@ export default function AllQR() {
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   )
 }
