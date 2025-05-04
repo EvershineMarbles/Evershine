@@ -36,7 +36,7 @@ export default function LandingPage() {
             onClick={() => router.push("https://evershine-agent.vercel.app/agent-login")}
             className="w-full py-5 bg-[rgb(25,74,149)] text-white text-lg font-medium rounded-[10px] hover:bg-[rgb(25,74,149)]/90 transition-all shadow-lg hover:shadow-xl"
           >
-            Advisor
+            Consultant
           </button>
         </div>
       </div>

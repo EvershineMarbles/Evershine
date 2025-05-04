@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Trash2, ChevronDown, ChevronUp } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Trash2, ChevronDown, ChevronUp, Calculator } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import QRCodeGenerator from "@/components/QRCodeGenerator"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -33,8 +34,10 @@ interface Product {
   postId: string
   quantityAvailable: number
   size?: string
+  sizeUnit?: string
   numberOfPieces?: number | null
   thickness?: string
+  finishes?: string
 }
 
 interface ApiResponse {
@@ -79,6 +82,26 @@ const debugProductData = (data: any) => {
   console.log("=========================================")
 }
 
+// Function to calculate how quantity was derived
+const calculateQuantityFormula = (size: string, sizeUnit: string, numberOfPieces: number): string | null => {
+  if (!size || !numberOfPieces) return null
+
+  // Parse size (e.g., "60x120")
+  const match = size.replace(/\s+/g, "").match(/^(\d+(?:\.\d+)?)[x*-](\d+(?:\.\d+)?)$/)
+  if (!match) return null
+
+  const length = Number.parseFloat(match[1])
+  const height = Number.parseFloat(match[2])
+
+  if (sizeUnit === "inches") {
+    const calculatedQuantity = ((length * height * numberOfPieces) / 144).toFixed(2)
+    return `(${length} × ${height} × ${numberOfPieces}) ÷ 144 = ${calculatedQuantity} sqft`
+  } else {
+    const calculatedQuantity = ((length * height * numberOfPieces) / 929).toFixed(2)
+    return `(${length} × ${height} × ${numberOfPieces}) ÷ 929 = ${calculatedQuantity} sqft`
+  }
+}
+
 export default function ProductDetail() {
   const params = useParams()
   const router = useRouter()
@@ -91,6 +114,7 @@ export default function ProductDetail() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [showFullDescription, setShowFullDescription] = useState(false)
+  const [quantityFormula, setQuantityFormula] = useState<string | null>(null)
 
   // Update the useEffect to use this enhanced debugging
   useEffect(() => {
@@ -116,14 +140,26 @@ export default function ProductDetail() {
           const processedProduct = {
             ...productData,
             size: productData.size !== undefined ? productData.size : "",
+            sizeUnit: productData.sizeUnit || "inches",
             numberOfPieces: productData.numberOfPieces !== undefined ? productData.numberOfPieces : null,
             thickness: productData.thickness !== undefined ? productData.thickness : "",
+            finishes: productData.finishes || "",
           }
 
           console.log("Processed product with added fields:", processedProduct)
 
           setProduct(processedProduct)
           setImageLoadError(new Array(productData.image.length).fill(false))
+
+          // Calculate quantity formula if all required fields are present
+          if (processedProduct.size && processedProduct.numberOfPieces) {
+            const formula = calculateQuantityFormula(
+              processedProduct.size,
+              processedProduct.sizeUnit || "inches",
+              Number(processedProduct.numberOfPieces),
+            )
+            setQuantityFormula(formula)
+          }
         } else {
           throw new Error(response.data.msg || "No data found")
         }
@@ -393,7 +429,24 @@ export default function ProductDetail() {
 
             {/* Quantity Available */}
             <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-500">Quality Available (in sqft)</p>
+              <div className="flex items-center justify-between">
+                <p className="text-gray-500">Quality Available (in sqft)</p>
+                {quantityFormula && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center text-gray-500 cursor-help">
+                          <Calculator className="h-4 w-4 mr-1" />
+                          <span className="text-xs">Auto-calculated</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-sm">{quantityFormula}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
               <p className="text-xl font-bold mt-1">{product.quantityAvailable}</p>
             </div>
 
@@ -402,7 +455,9 @@ export default function ProductDetail() {
               <div>
                 <p className="text-gray-500">Size</p>
                 <p className="text-lg font-bold mt-1">
-                  {product.size !== undefined && product.size !== null && product.size !== "" ? product.size : "-"}
+                  {product.size !== undefined && product.size !== null && product.size !== ""
+                    ? `${product.size} ${product.sizeUnit || "inches"}`
+                    : "-"}
                 </p>
               </div>
               <div>
@@ -422,6 +477,14 @@ export default function ProductDetail() {
                 </p>
               </div>
             </div>
+
+            {/* Finishes */}
+            {product.finishes && (
+              <div className="pb-4 border-b border-gray-200">
+                <p className="text-gray-500">Finishes</p>
+                <p className="text-lg font-bold mt-1 capitalize">{product.finishes}</p>
+              </div>
+            )}
 
             {/* Application Areas */}
             <div className="pb-4 border-b border-gray-200">

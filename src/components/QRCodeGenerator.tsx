@@ -12,6 +12,8 @@ interface QRCodeGeneratorProps {
   category?: string
   thickness?: string
   size?: string
+  sizeUnit?: string
+  finishes?: string
 }
 
 export default function QRCodeGenerator({
@@ -20,6 +22,8 @@ export default function QRCodeGenerator({
   category = "",
   thickness = "",
   size = "",
+  sizeUnit = "inches",
+  finishes = "",
 }: QRCodeGeneratorProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [isGenerating, setIsGenerating] = useState(true)
@@ -64,6 +68,50 @@ export default function QRCodeGenerator({
       templateImage.onload = () => {
         // Draw the template image on the canvas
         ctx.drawImage(templateImage, 0, 0, canvas.width, canvas.height)
+
+        // Add product details to the QR code
+        ctx.font = "bold 24px Arial"
+        ctx.fillStyle = "#000000"
+        ctx.textAlign = "center"
+
+        // Product name (centered, with wrapping if needed)
+        const maxWidth = 400
+        const words = productName.split(" ")
+        let line = ""
+        let y = 580
+
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + " "
+          const metrics = ctx.measureText(testLine)
+          const testWidth = metrics.width
+
+          if (testWidth > maxWidth && i > 0) {
+            ctx.fillText(line, canvas.width / 2, y)
+            line = words[i] + " "
+            y += 30
+          } else {
+            line = testLine
+          }
+        }
+        ctx.fillText(line, canvas.width / 2, y)
+
+        // Additional details
+        ctx.font = "18px Arial"
+        if (category) {
+          ctx.fillText(`Category: ${category}`, canvas.width / 2, y + 40)
+        }
+
+        if (size) {
+          ctx.fillText(`Size: ${size} ${sizeUnit}`, canvas.width / 2, y + 70)
+        }
+
+        if (thickness) {
+          ctx.fillText(`Thickness: ${thickness}`, canvas.width / 2, y + 100)
+        }
+
+        if (finishes) {
+          ctx.fillText(`Finish: ${finishes.charAt(0).toUpperCase() + finishes.slice(1)}`, canvas.width / 2, y + 130)
+        }
 
         // Load and draw the QR code in the white space - using document.createElement
         const qrCode = document.createElement("img")

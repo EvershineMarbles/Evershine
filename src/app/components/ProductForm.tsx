@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { ArrowLeft, Plus, Loader2, Download, X, Check } from "lucide-react"
+import { ArrowLeft, Plus, Loader2, Download, X, Check, Calculator } from "lucide-react"
 import { useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
 import QRCode from "qrcode"
@@ -18,6 +18,10 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card } from "@/components/ui/card"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -67,8 +71,10 @@ interface ProductFormProps {
     price: string
     quantityAvailable: string
     size?: string
+    sizeUnit?: string
     numberOfPieces?: string
     thickness?: string
+    finishes?: string
     applicationAreas: string
     description?: string
     image: string[]
@@ -84,11 +90,30 @@ const formSchema = z.object({
   price: z.string().min(1, "Price is required"),
   quantityAvailable: z.string().min(1, "Quantity is required"),
   size: z.string().optional(),
+  sizeUnit: z.string().default("inches"),
   numberOfPieces: z.string().optional(),
   thickness: z.string().optional(),
+  finishes: z.string().optional(),
   applicationAreas: z.array(z.string()).min(1, "Please select at least one application area"),
   description: z.string().optional(),
 })
+
+const parseSizeString = (sizeStr: string): { length: number; height: number } | null => {
+  // Handle different formats: "60x120", "60 x 120", "60*120", "60 * 120"
+  const cleanedStr = sizeStr.replace(/\s+/g, "").toLowerCase()
+
+  // Try to match patterns like 60x120, 60*120, 60-120
+  const match = cleanedStr.match(/^(\d+(?:\.\d+)?)[x*-](\d+(?:\.\d+)?)$/)
+
+  if (match) {
+    return {
+      length: Number.parseFloat(match[1]),
+      height: Number.parseFloat(match[2]),
+    }
+  }
+
+  return null
+}
 
 export default function ProductForm({ mode = "create", initialData }: ProductFormProps) {
   const router = useRouter()
@@ -99,6 +124,9 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
   const [postId, setPostId] = useState<string | null>(initialData?.postId || null)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [newImageCount, setNewImageCount] = useState<number>(0)
+  const [autoCalculateQuantity, setAutoCalculateQuantity] = useState(true)
+  const [sizeParseError, setSizeParseError] = useState<string | null>(null)
+  const [calculationPreview, setCalculationPreview] = useState<string | null>(null)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -108,8 +136,10 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       price: initialData?.price || "",
       quantityAvailable: initialData?.quantityAvailable || "",
       size: initialData?.size || "",
+      sizeUnit: initialData?.sizeUnit || "inches",
       numberOfPieces: initialData?.numberOfPieces || "",
       thickness: initialData?.thickness || "",
+      finishes: initialData?.finishes || "",
       applicationAreas: initialData?.applicationAreas ? initialData.applicationAreas.split(",") : [],
       description: initialData?.description || "",
     },
@@ -120,6 +150,56 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       setPreviews(initialData.image)
     }
   }, [mode, initialData])
+
+  // Calculate quantity based on size, unit, and number of pieces
+  useEffect(() => {
+    if (!autoCalculateQuantity) {
+      setCalculationPreview(null)
+      return
+    }
+
+    const size = form.getValues("size")
+    const sizeUnit = form.getValues("sizeUnit")
+    const numberOfPieces = form.getValues("numberOfPieces")
+
+    // Only calculate if we have all required values
+    if (!size || !numberOfPieces) {
+      setSizeParseError(null)
+      setCalculationPreview(null)
+      return
+    }
+
+    const parsedSize = parseSizeString(size)
+    if (!parsedSize) {
+      setSizeParseError("Size format should be like '60x120' (length x height)")
+      setCalculationPreview(null)
+      return
+    }
+
+    setSizeParseError(null)
+    const { length, height } = parsedSize
+    const pieces = Number.parseFloat(numberOfPieces)
+
+    let calculatedQuantity: number
+    let formula: string
+
+    if (sizeUnit === "inches") {
+      // For inches: (length * height * numberOfPieces) / 144 = quantity available
+      calculatedQuantity = (length * height * pieces) / 144
+      formula = `(${length} × ${height} × ${pieces}) ÷ 144 = ${calculatedQuantity.toFixed(2)} sqft`
+    } else {
+      // For cm: (length * height * numberOfPieces) / 929 = quantity available
+      calculatedQuantity = (length * height * pieces) / 929
+      formula = `(${length} × ${height} × ${pieces}) ÷ 929 = ${calculatedQuantity.toFixed(2)} sqft`
+    }
+
+    // Round to 2 decimal places
+    calculatedQuantity = Math.round(calculatedQuantity * 100) / 100
+
+    // Update the form
+    form.setValue("quantityAvailable", calculatedQuantity.toString())
+    setCalculationPreview(formula)
+  }, [form.watch("size"), form.watch("sizeUnit"), form.watch("numberOfPieces"), autoCalculateQuantity])
 
   const validateImage = (file: File): boolean => {
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
@@ -276,6 +356,8 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       if (!formData.has("size")) formData.append("size", values.size || "")
       if (!formData.has("numberOfPieces")) formData.append("numberOfPieces", values.numberOfPieces || "")
       if (!formData.has("thickness")) formData.append("thickness", values.thickness || "")
+      if (!formData.has("sizeUnit")) formData.append("sizeUnit", values.sizeUnit || "inches")
+      if (!formData.has("finishes")) formData.append("finishes", values.finishes || "")
 
       // Handle images based on mode
       if (mode === "edit") {
@@ -422,7 +504,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
               />
             </div>
 
-            {/* Price and Quantity Row */}
+            {/* Price and Thickness Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="form-field">
                 <FormLabel className="text-[#181818] font-bold block mb-2">Price (per sqft)</FormLabel>
@@ -435,71 +517,6 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                         <Input
                           type="number"
                           placeholder="per sqft"
-                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="form-field">
-                <FormLabel className="text-[#181818] font-bold block mb-2">Quality Available (in sqft)</FormLabel>
-                <FormField
-                  control={form.control}
-                  name="quantityAvailable"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="in sqft"
-                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            {/* Size, Number of Pieces, and Thickness */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="form-field">
-                <FormLabel className="text-[#181818] font-bold block mb-2">Size</FormLabel>
-                <FormField
-                  control={form.control}
-                  name="size"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., 60x60 cm"
-                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="form-field">
-                <FormLabel className="text-[#181818] font-bold block mb-2">No. of Pieces</FormLabel>
-                <FormField
-                  control={form.control}
-                  name="numberOfPieces"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Enter quantity"
                           className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
                           {...field}
                         />
@@ -529,6 +546,167 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                   )}
                 />
               </div>
+            </div>
+
+            {/* Size with Unit, Number of Pieces, and Quantity */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="form-field">
+                <FormLabel className="text-[#181818] font-bold block mb-2">Size</FormLabel>
+                <div className="flex gap-2">
+                  <FormField
+                    control={form.control}
+                    name="size"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., 60x120"
+                            className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
+                            {...field}
+                          />
+                        </FormControl>
+                        {sizeParseError && <p className="text-xs text-red-500 mt-1">{sizeParseError}</p>}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="sizeUnit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="rounded-md border-[#e3e3e3] h-12 focus:ring-[#194a95] w-24">
+                              <SelectValue placeholder="Unit" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent
+                            className="bg-white border rounded-md shadow-lg z-50"
+                            position="popper"
+                            sideOffset={5}
+                          >
+                            <SelectItem value="inches">inches</SelectItem>
+                            <SelectItem value="cm">cm</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Format: length x height (e.g., 60x120)</p>
+              </div>
+
+              <div className="form-field">
+                <FormLabel className="text-[#181818] font-bold block mb-2">No. of Pieces</FormLabel>
+                <FormField
+                  control={form.control}
+                  name="numberOfPieces"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="Enter quantity"
+                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="form-field">
+                <div className="flex justify-between items-center mb-2">
+                  <FormLabel className="text-[#181818] font-bold">Quality Available (in sqft)</FormLabel>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">Auto Calculate</span>
+                          <Switch
+                            checked={autoCalculateQuantity}
+                            onCheckedChange={setAutoCalculateQuantity}
+                            className="data-[state=checked]:bg-[#194a95]"
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          {form.getValues("sizeUnit") === "inches"
+                            ? "Formula: (length × height × pieces) ÷ 144"
+                            : "Formula: (length × height × pieces) ÷ 929"}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="quantityAvailable"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="relative">
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="in sqft"
+                            className={`rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95] ${
+                              autoCalculateQuantity ? "bg-gray-50" : ""
+                            }`}
+                            readOnly={autoCalculateQuantity}
+                            {...field}
+                          />
+                        </FormControl>
+                        {autoCalculateQuantity && (
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                            <Calculator className="h-4 w-4" />
+                          </div>
+                        )}
+                      </div>
+                      {calculationPreview && autoCalculateQuantity && (
+                        <p className="text-xs text-gray-500 mt-1">Calculation: {calculationPreview}</p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Finishes */}
+            <div className="form-field">
+              <FormLabel className="text-[#181818] font-bold block mb-2">Finishes</FormLabel>
+              <FormField
+                control={form.control}
+                name="finishes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex flex-wrap items-center gap-2"
+                      >
+                        {["Polish", "Leather", "Flute", "River", "Satin", "Dual"].map((finish) => (
+                          <Label
+                            key={finish}
+                            htmlFor={`finish-${finish.toLowerCase()}`}
+                            className="border cursor-pointer rounded-md p-2 flex items-center gap-2 [&:has(:checked)]:bg-muted"
+                          >
+                            <RadioGroupItem id={`finish-${finish.toLowerCase()}`} value={finish.toLowerCase()} />
+                            {finish}
+                          </Label>
+                        ))}
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* Image Upload */}
@@ -702,4 +880,3 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
     </div>
   )
 }
-
