@@ -564,7 +564,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
               <div className="col-span-5">
                 <FormLabel className="text-[#181818] font-bold block mb-2 text-lg">Size</FormLabel>
                 <div className="flex items-center gap-1">
-                  <div className="w-[70px]">
+                  <div className="w-[80px]">
                     <FormField
                       control={form.control}
                       name="sizeLength"
@@ -600,7 +600,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                     <span className="text-gray-500 text-xl font-bold">×</span>
                   </div>
 
-                  <div className="w-[100px]">
+                  <div className="w-[80px]">
                     <FormField
                       control={form.control}
                       name="sizeHeight"
@@ -639,7 +639,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                       <FormItem>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="rounded-md border-[#e3e3e3] h-14 focus:ring-[#194a95] w-14 text-lg">
+                            <SelectTrigger className="rounded-md border-[#e3e3e3] h-14 focus:ring-[#194a95] w-24 text-lg">
                               <SelectValue placeholder="Unit" />
                             </SelectTrigger>
                           </FormControl>
