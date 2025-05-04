@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Download, Loader2, Search } from "lucide-react"
+import { ArrowLeft, Download, Loader2, Search, Home } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import QRCode from "qrcode"
@@ -97,41 +97,63 @@ export default function ProductQRList() {
           qrCode.crossOrigin = "anonymous"
 
           qrCode.onload = () => {
-            // Draw QR code in the white space
+            // Draw QR code in the white space - keep the exact same position
             ctx.drawImage(qrCode, 380, 620, 150, 150)
 
             // Add product name below the QR code
-            ctx.font = "bold 16px Arial"
+            // Adjust font size based on name length
+            const capitalizedName = capitalizeWords(product.name)
+            const fontSize = capitalizedName.length > 20 ? 14 : 16
+            ctx.font = `bold ${fontSize}px Arial`
             ctx.fillStyle = "#000000"
             ctx.textAlign = "center"
 
-            // Position the text below the QR code
+            // Position the text below the QR code in the white area
             const qrCodeCenterX = 380 + 75 // QR code X position + half width
-            const textY = 790 // Position below the QR code
-
-            // Capitalize the product name
-            const capitalizedName = capitalizeWords(product.name)
-
-            // Wrap text if needed
             const maxWidth = 150 // Same width as QR code
-            const words = capitalizedName.split(" ")
-            let line = ""
-            let y = textY
 
+            // Improved text wrapping for long names
+            const words = capitalizedName.split(" ")
+            const lines = []
+            let currentLine = ""
+
+            // Create lines that fit within maxWidth
             for (let i = 0; i < words.length; i++) {
-              const testLine = line + words[i] + " "
+              const testLine = currentLine + (currentLine ? " " : "") + words[i]
               const metrics = ctx.measureText(testLine)
               const testWidth = metrics.width
 
               if (testWidth > maxWidth && i > 0) {
-                ctx.fillText(line, qrCodeCenterX, y)
-                line = words[i] + " "
-                y += 20 // Line height
+                lines.push(currentLine)
+                currentLine = words[i]
               } else {
-                line = testLine
+                currentLine = testLine
               }
             }
-            ctx.fillText(line, qrCodeCenterX, y)
+
+            if (currentLine) {
+              lines.push(currentLine)
+            }
+
+            // Limit to maximum 3 lines and add ellipsis if needed
+            if (lines.length > 3) {
+              lines.splice(3)
+              const lastLine = lines[2]
+              lines[2] = lastLine.substring(0, lastLine.length - 3) + "..."
+            }
+
+            // Calculate vertical position based on number of lines
+            const lineHeight = fontSize + 4
+            const totalTextHeight = lines.length * lineHeight
+
+            // Keep text in the same vertical area, just adjust spacing between lines
+            const startY = 790 - ((lines.length - 1) * lineHeight) / 2
+
+            // Draw each line
+            lines.forEach((line, index) => {
+              const y = startY + index * lineHeight
+              ctx.fillText(line, qrCodeCenterX, y)
+            })
 
             // Convert canvas to data URL
             const dataUrl = canvas.toDataURL("image/png")
@@ -151,36 +173,11 @@ export default function ProductQRList() {
     }
   }
 
-  const generateSimpleQRCode = async (productId: string): Promise<string> => {
-    try {
-      const productUrl = `${window.location.origin}/product/${productId}`
-      return await QRCode.toDataURL(productUrl, {
-        width: 300,
-        margin: 1,
-        color: {
-          dark: "#000000",
-          light: "#ffffff",
-        },
-      })
-    } catch (error) {
-      console.error("Error generating simple QR code:", error)
-      throw error
-    }
-  }
-
-  const handleDownloadQR = async (product: Product, type: "simple" | "branded") => {
+  const handleDownloadQR = async (product: Product) => {
     try {
       setGeneratingQR((prev) => ({ ...prev, [product.postId]: true }))
-
-      let qrCodeUrl: string
-
-      if (type === "simple") {
-        qrCodeUrl = await generateSimpleQRCode(product.postId)
-        downloadQR(qrCodeUrl, `evershine-qr-${product.postId}.png`)
-      } else {
-        qrCodeUrl = await generateQRCode(product)
-        downloadQR(qrCodeUrl, `evershine-product-${product.postId}.png`)
-      }
+      const qrCodeUrl = await generateQRCode(product)
+      downloadQR(qrCodeUrl, `evershine-product-${product.postId}.png`)
     } catch (error) {
       console.error("Error downloading QR code:", error)
     } finally {
@@ -223,35 +220,50 @@ export default function ProductQRList() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
+      {/* Dashboard Header Strip */}
+      <div className="w-full bg-[rgb(25,74,149)] py-4 px-6 shadow-md">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <h1 className="text-white text-xl font-medium">Evershine Dashboard</h1>
+          <button
+            onClick={() => router.push("https://evershine-two.vercel.app/")}
+            className="flex items-center text-white hover:text-gray-200 transition-colors"
+          >
+            <Home className="h-5 w-5" />
+            <span className="ml-2">Home</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Back Button Header */}
       <div className="sticky top-0 z-10 bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-          <div className="py-4 flex items-center">
+          <div className="py-4">
             <button
               onClick={() => router.back()}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              aria-label="Go back"
+              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
             >
               <ArrowLeft className="h-6 w-6" />
             </button>
-            <h1 className="text-2xl font-bold ml-4">Product QR Codes</h1>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6">
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-3 w-full rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#194a95] focus:border-transparent"
-            />
+        {/* Header with Search */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <h1 className="text-4xl font-bold text-[#181818]">Product QR Codes</h1>
+          <div className="relative w-full md:w-auto">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <input
+                type="text"
+                placeholder="Search Product..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-3 w-full md:w-[300px] rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#194a95] focus:border-transparent [&::placeholder]:text-black"
+              />
+            </div>
           </div>
         </div>
 
@@ -265,9 +277,6 @@ export default function ProductQRList() {
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
                   Price
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
-                  Category
                 </th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -300,9 +309,6 @@ export default function ProductQRList() {
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">₹{product.price}/per sqft</div>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{product.category || "N/A"}</div>
-                  </td>
                   <td className="px-4 py-4 whitespace-nowrap text-right">
                     <div className="flex justify-end space-x-2">
                       <Button
@@ -314,22 +320,7 @@ export default function ProductQRList() {
                         Preview
                       </Button>
                       <Button
-                        onClick={() => handleDownloadQR(product, "simple")}
-                        variant="outline"
-                        size="sm"
-                        disabled={!!generatingQR[product.postId]}
-                        className="text-[#194a95] border-[#194a95]"
-                      >
-                        {generatingQR[product.postId] ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>
-                            <Download className="h-4 w-4 mr-1" /> Simple QR
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        onClick={() => handleDownloadQR(product, "branded")}
+                        onClick={() => handleDownloadQR(product)}
                         size="sm"
                         disabled={!!generatingQR[product.postId]}
                         className="bg-[#194a95] hover:bg-[#0f3a7a]"
@@ -338,7 +329,7 @@ export default function ProductQRList() {
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
-                            <Download className="h-4 w-4 mr-1" /> Branded QR
+                            <Download className="h-4 w-4 mr-1" /> Download QR
                           </>
                         )}
                       </Button>
@@ -383,21 +374,9 @@ export default function ProductQRList() {
                 <h4 className="font-medium">{previewProduct.name}</h4>
                 <p className="text-sm text-gray-500">₹{previewProduct.price}/per sqft</p>
               </div>
-              <div className="flex space-x-3">
-                <Button
-                  onClick={() => handleDownloadQR(previewProduct, "simple")}
-                  variant="outline"
-                  className="text-[#194a95] border-[#194a95]"
-                >
-                  <Download className="h-4 w-4 mr-1" /> Simple QR
-                </Button>
-                <Button
-                  onClick={() => handleDownloadQR(previewProduct, "branded")}
-                  className="bg-[#194a95] hover:bg-[#0f3a7a]"
-                >
-                  <Download className="h-4 w-4 mr-1" /> Branded QR
-                </Button>
-              </div>
+              <Button onClick={() => handleDownloadQR(previewProduct)} className="bg-[#194a95] hover:bg-[#0f3a7a]">
+                <Download className="h-4 w-4 mr-1" /> Download QR
+              </Button>
             </div>
           </div>
         </div>
