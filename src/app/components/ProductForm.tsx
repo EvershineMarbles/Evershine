@@ -114,6 +114,12 @@ const parseSizeString = (sizeStr: string): { length: number; height: number } | 
   return null
 }
 
+// Helper function to parse finishes string into array
+const parseFinishes = (finishesStr: string | undefined): string[] => {
+  if (!finishesStr) return []
+  return finishesStr.split(",").map((f) => f.trim().toLowerCase())
+}
+
 export default function ProductForm({ mode = "create", initialData }: ProductFormProps) {
   const router = useRouter()
   const [images, setImages] = useState<File[]>([])
@@ -128,6 +134,9 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
   const [calculationPreview, setCalculationPreview] = useState<string | null>(null)
   // No need for focus state variables
 
+  // Parse finishes from initialData
+  const initialFinishes = parseFinishes(initialData?.finishes)
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -141,11 +150,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       sizeUnit: initialData?.sizeUnit || "in",
       numberOfPieces: initialData?.numberOfPieces || "",
       thickness: initialData?.thickness || "",
-      finishes: initialData?.finishes
-        ? typeof initialData.finishes === "string"
-          ? initialData.finishes.split(",").map((f) => f.trim().toLowerCase())
-          : initialData.finishes
-        : [],
+      finishes: initialFinishes,
       applicationAreas: initialData?.applicationAreas ? initialData.applicationAreas.split(",") : [],
       description: initialData?.description || "",
     },
@@ -325,15 +330,11 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       // Log the form values before sending
       console.log("Form values before sending:", values)
 
-      // Convert applicationAreas array to string
+      // Convert arrays to strings for FormData
       const formValues = {
         ...values,
         applicationAreas: values.applicationAreas.join(","),
-      }
-
-      // Convert finishes array to string if it exists
-      if (Array.isArray(values.finishes) && values.finishes.length > 0) {
-        formValues.finishes = values.finishes.join(",")
+        finishes: values.finishes ? values.finishes.join(",") : "",
       }
 
       // Log the processed form values
@@ -375,7 +376,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       if (!formData.has("numberOfPieces")) formData.append("numberOfPieces", values.numberOfPieces || "")
       if (!formData.has("thickness")) formData.append("thickness", values.thickness || "")
       if (!formData.has("sizeUnit")) formData.append("sizeUnit", values.sizeUnit || "in")
-      if (!formData.has("finishes")) formData.append("finishes", values.finishes || "")
+      if (!formData.has("finishes")) formData.append("finishes", values.finishes ? values.finishes.join(",") : "")
 
       // Handle images based on mode
       if (mode === "edit") {
