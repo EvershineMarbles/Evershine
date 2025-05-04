@@ -749,7 +749,51 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 />
               </div>
             </div>
+ 
 
+            {/* Image Upload */}
+            <div className="form-field">
+              <FormLabel className="text-[#181818] font-bold block mb-2">
+                Upload Product Images ({previews.length}/10)
+              </FormLabel>
+              <div className="flex gap-4 flex-wrap items-start">
+                {previews.length < 10 && (
+                  <label className="block border-2 border-[#383535] rounded-md w-full max-w-[100px] aspect-square cursor-pointer hover:border-[#194a95] transition-colors shrink-0">
+                    <div className="flex items-center justify-center h-full">
+                      <Plus className="w-8 h-8 text-[#383535]" />
+                    </div>
+                    <input type="file" onChange={handleImageChange} multiple accept="image/*" className="hidden" />
+                  </label>
+                )}
+
+                {previews.length > 0 && (
+                  <div className="flex gap-4 flex-wrap flex-1">
+                    {previews.map((preview, index) => (
+                      <div key={index} className="relative w-[100px] aspect-square">
+                        <Image
+                          src={preview || "/placeholder.svg"}
+                          alt={`Preview ${index + 1}`}
+                          width={100}
+                          height={100}
+                          className="rounded-md object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-1 right-1 bg-black/50 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                You can upload up to 10 images. {previews.length} of 10 used.
+              </p>
+            </div>
+            
             {/* Application Areas - Changed to checkbox buttons */}
             <div className="form-field">
               <FormLabel className="text-[#181818] font-bold block mb-2">Application Areas</FormLabel>
@@ -834,48 +878,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
               />
             </div>
 
-            {/* Image Upload */}
-            <div className="form-field">
-              <FormLabel className="text-[#181818] font-bold block mb-2">
-                Upload Product Images ({previews.length}/10)
-              </FormLabel>
-              <div className="flex gap-4 flex-wrap items-start">
-                {previews.length < 10 && (
-                  <label className="block border-2 border-[#383535] rounded-md w-full max-w-[100px] aspect-square cursor-pointer hover:border-[#194a95] transition-colors shrink-0">
-                    <div className="flex items-center justify-center h-full">
-                      <Plus className="w-8 h-8 text-[#383535]" />
-                    </div>
-                    <input type="file" onChange={handleImageChange} multiple accept="image/*" className="hidden" />
-                  </label>
-                )}
-
-                {previews.length > 0 && (
-                  <div className="flex gap-4 flex-wrap flex-1">
-                    {previews.map((preview, index) => (
-                      <div key={index} className="relative w-[100px] aspect-square">
-                        <Image
-                          src={preview || "/placeholder.svg"}
-                          alt={`Preview ${index + 1}`}
-                          width={100}
-                          height={100}
-                          className="rounded-md object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 bg-black/50 text-white rounded-full w-5 h-5 flex items-center justify-center"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                You can upload up to 10 images. {previews.length} of 10 used.
-              </p>
-            </div>
+          
 
             {/* Description */}
             <div className="form-field">

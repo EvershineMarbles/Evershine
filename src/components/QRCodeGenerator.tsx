@@ -69,7 +69,7 @@ export default function QRCodeGenerator({
         // Draw the template image on the canvas
         ctx.drawImage(templateImage, 0, 0, canvas.width, canvas.height)
 
-        // Add product details to the QR code
+        // Add product name below the QR code
         ctx.font = "bold 24px Arial"
         ctx.fillStyle = "#000000"
         ctx.textAlign = "center"
@@ -95,23 +95,8 @@ export default function QRCodeGenerator({
         }
         ctx.fillText(line, canvas.width / 2, y)
 
-        // Additional details
-        ctx.font = "18px Arial"
-        if (category) {
-          ctx.fillText(`Category: ${category}`, canvas.width / 2, y + 40)
-        }
-
-        if (size) {
-          ctx.fillText(`Size: ${size} ${sizeUnit}`, canvas.width / 2, y + 70)
-        }
-
-        if (thickness) {
-          ctx.fillText(`Thickness: ${thickness}`, canvas.width / 2, y + 100)
-        }
-
-        if (finishes) {
-          ctx.fillText(`Finish: ${finishes.charAt(0).toUpperCase() + finishes.slice(1)}`, canvas.width / 2, y + 130)
-        }
+        // We're only showing the product name, so we'll skip the other details
+        // that were previously here (category, size, thickness, finishes)
 
         // Load and draw the QR code in the white space - using document.createElement
         const qrCode = document.createElement("img")

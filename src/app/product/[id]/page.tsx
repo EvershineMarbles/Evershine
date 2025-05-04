@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Trash2, ChevronDown, ChevronUp, Calculator } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Trash2, ChevronDown, ChevronUp, Calculator, Download } from 'lucide-react'
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
@@ -276,6 +276,38 @@ export default function ProductDetail() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  }
+
+  const downloadSimpleQRCode = async () => {
+    try {
+      if (!product) return
+
+      // Import QRCode dynamically to avoid SSR issues
+      const QRCode = (await import("qrcode")).default
+
+      // Generate the product URL
+      const productUrl = `${window.location.origin}/product/${product.postId}`
+
+      // Generate QR code
+      const qrCodeDataUrl = await QRCode.toDataURL(productUrl, {
+        width: 300,
+        margin: 1,
+        color: {
+          dark: "#000000",
+          light: "#ffffff",
+        },
+      })
+
+      // Download the QR code
+      const link = document.createElement("a")
+      link.href = qrCodeDataUrl
+      link.download = `evershine-qr-${product.postId}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error("Error generating QR code:", error)
+    }
   }
 
   if (loading) {
@@ -552,6 +584,14 @@ export default function ProductDetail() {
                 Edit
               </Button>
 
+              <Button
+                onClick={downloadSimpleQRCode}
+                className="px-8 py-3 bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-md"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download QR
+              </Button>
+
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" className="px-8 py-3" disabled={isDeleting}>
@@ -600,6 +640,13 @@ export default function ProductDetail() {
               size={product.size}
             />
           )}
+        </div>
+        
+        {/* Disclaimer */}
+        <div className="max-w-6xl mx-auto mt-8 pt-4 border-t">
+          <p className="text-gray-500 text-sm italic text-center">
+            Disclaimer: Actual quantity can differ
+          </p>
         </div>
       </div>
     </div>
