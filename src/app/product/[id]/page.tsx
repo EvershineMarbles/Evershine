@@ -462,7 +462,7 @@ export default function ProductDetail() {
             {/* Quantity Available */}
             <div className="pb-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <p className="text-gray-500">Quality Available (in sqft)</p>
+                <p className="text-gray-500">Quantity Available (in sqft)</p>
                 {quantityFormula && (
                   <TooltipProvider>
                     <Tooltip>

@@ -710,7 +710,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
 
               <div className="col-span-5">
                 <div className="flex justify-between items-center mb-2">
-                  <FormLabel className="text-[#181818] font-bold text-lg">Quality Available (in sqft)</FormLabel>
+                  <FormLabel className="text-[#181818] font-bold text-lg">Quantity Available (in sqft)</FormLabel>
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={autoCalculateQuantity}
@@ -793,7 +793,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 You can upload up to 10 images. {previews.length} of 10 used.
               </p>
             </div>
-            
+
             {/* Application Areas - Changed to checkbox buttons */}
             <div className="form-field">
               <FormLabel className="text-[#181818] font-bold block mb-2">Application Areas</FormLabel>
