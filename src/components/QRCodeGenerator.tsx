@@ -69,41 +69,42 @@ export default function QRCodeGenerator({
         // Draw the template image on the canvas
         ctx.drawImage(templateImage, 0, 0, canvas.width, canvas.height)
 
-        // Add product name below the QR code
-        ctx.font = "bold 24px Arial"
-        ctx.fillStyle = "#000000"
-        ctx.textAlign = "center"
-
-        // Product name (centered, with wrapping if needed)
-        const maxWidth = 400
-        const words = productName.split(" ")
-        let line = ""
-        let y = 580
-
-        for (let i = 0; i < words.length; i++) {
-          const testLine = line + words[i] + " "
-          const metrics = ctx.measureText(testLine)
-          const testWidth = metrics.width
-
-          if (testWidth > maxWidth && i > 0) {
-            ctx.fillText(line, canvas.width / 2, y)
-            line = words[i] + " "
-            y += 30
-          } else {
-            line = testLine
-          }
-        }
-        ctx.fillText(line, canvas.width / 2, y)
-
-        // We're only showing the product name, so we'll skip the other details
-        // that were previously here (category, size, thickness, finishes)
-
         // Load and draw the QR code in the white space - using document.createElement
         const qrCode = document.createElement("img")
         qrCode.crossOrigin = "anonymous"
         qrCode.onload = () => {
           // Draw QR code in the white space at bottom right - adjusted position
           ctx.drawImage(qrCode, 380, 640, 150, 150)
+
+          // Add product name directly below the QR code in the white area
+          ctx.font = "bold 16px Arial"
+          ctx.fillStyle = "#000000"
+          ctx.textAlign = "center"
+
+          // Position the text below the QR code in the white area
+          const qrCodeCenterX = 380 + 75 // QR code X position + half width
+          const textY = 810 // Position below the QR code
+
+          // Wrap text if needed
+          const maxWidth = 150 // Same width as QR code
+          const words = productName.split(" ")
+          let line = ""
+          let y = textY
+
+          for (let i = 0; i < words.length; i++) {
+            const testLine = line + words[i] + " "
+            const metrics = ctx.measureText(testLine)
+            const testWidth = metrics.width
+
+            if (testWidth > maxWidth && i > 0) {
+              ctx.fillText(line, qrCodeCenterX, y)
+              line = words[i] + " "
+              y += 20 // Line height
+            } else {
+              line = testLine
+            }
+          }
+          ctx.fillText(line, qrCodeCenterX, y)
 
           // Convert canvas to data URL
           const dataUrl = canvas.toDataURL("image/png")
