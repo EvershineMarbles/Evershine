@@ -77,41 +77,32 @@ export default function QRCodeGenerator({
         // Draw the template image on the canvas
         ctx.drawImage(templateImage, 0, 0, canvas.width, canvas.height)
 
-        // Capitalize the product name
-        const capitalizedName = capitalizeWords(productName)
-
-        // Pre-calculate if the name will need multiple lines
-        ctx.font = "bold 16px Arial"
-        const maxWidth = 150 // Same width as QR code
-        const nameWidth = ctx.measureText(capitalizedName).width
-        const needsMultipleLines = nameWidth > maxWidth
-
-        // Adjust QR code position based on name length
-        const qrCodeX = 380
-        const qrCodeY = needsMultipleLines ? 620 : 640 // Move up by 20px if name is long
-        const qrCodeSize = 150
-
         // Load and draw the QR code in the white space - using document.createElement
         const qrCode = document.createElement("img")
         qrCode.crossOrigin = "anonymous"
         qrCode.onload = () => {
-          // Move QR code higher on the template
-          ctx.drawImage(qrCode, 380, 620, qrCodeSize, qrCodeSize)
+          // Draw QR code in the white space at bottom right - adjusted position
+          ctx.drawImage(qrCode, 380, 640, 150, 150)
 
           // Add product name directly below the QR code in the white area
+          ctx.font = "bold 16px Arial"
           ctx.fillStyle = "#000000"
           ctx.textAlign = "center"
 
           // Position the text below the QR code in the white area
           const qrCodeCenterX = 380 + 75 // QR code X position + half width
-          const textY = 790 // Adjusted position below the QR code
+          const textY = 810 // Position below the QR code
+
+          // Capitalize the product name
+          const capitalizedName = capitalizeWords(productName)
 
           // Wrap text for longer product names
+          const maxWidth = 150 // Same width as QR code
           const words = capitalizedName.split(" ")
           let line = ""
           let y = textY
           let lineCount = 0
-          const maxLines = needsMultipleLines ? 3 : 1 // Allow more lines if we moved the QR code up
+          const maxLines = 3 // Maximum number of lines to display
 
           for (let i = 0; i < words.length; i++) {
             // If we've reached the maximum number of lines, add ellipsis and break
@@ -127,7 +118,7 @@ export default function QRCodeGenerator({
             if (testWidth > maxWidth && i > 0) {
               ctx.fillText(line, qrCodeCenterX, y)
               line = words[i] + " "
-              y += 22 // Increased line height for better readability
+              y += 20 // Line height
               lineCount++
             } else {
               line = testLine

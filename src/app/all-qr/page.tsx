@@ -10,6 +10,7 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import QRCode from "qrcode"
 import { toast } from "sonner"
+import Link from "next/link"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -241,8 +242,8 @@ export default function ProductQRList() {
 
       setUpdatingPrice((prev) => ({ ...prev, [productId]: true }))
 
-      const response = await axios.post(`${API_URL}/api/updateProductPrice`, {
-        postId: productId,
+      // Using the correct endpoint for updating product price
+      const response = await axios.post(`${API_URL}/api/updateProduct/${productId}`, {
         price: Number(newPrice),
       })
 
@@ -348,7 +349,7 @@ export default function ProductQRList() {
                 <tr key={product._id} className="hover:bg-gray-50">
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0 mr-3">
+                      <Link href={`/product/${product.postId}`} className="h-10 w-10 flex-shrink-0 mr-3 block">
                         <Image
                           src={product.image[0] || "/placeholder.svg"}
                           alt={product.name}
@@ -359,9 +360,14 @@ export default function ProductQRList() {
                             e.currentTarget.src = "/placeholder.svg"
                           }}
                         />
-                      </div>
+                      </Link>
                       <div className="ml-2">
-                        <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                        <Link
+                          href={`/product/${product.postId}`}
+                          className="text-sm font-medium text-gray-900 hover:text-[#194a95] transition-colors cursor-pointer"
+                        >
+                          {product.name}
+                        </Link>
                         <div className="text-xs text-gray-500">ID: {product.postId.slice(0, 8)}...</div>
                       </div>
                     </div>
