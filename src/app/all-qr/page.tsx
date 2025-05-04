@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { toast } from "sonner"
 import QRCodeGenerator from "@/components/QRCodeGenerator"
+import QRCode from "qrcode"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -36,6 +37,7 @@ export default function AllQR() {
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null)
   const [priceValues, setPriceValues] = useState<Record<string, string>>({})
   const [updatingPrice, setUpdatingPrice] = useState<Record<string, boolean>>({})
+  const [generatingQR, setGeneratingQR] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     fetchProducts()
@@ -119,6 +121,129 @@ export default function AllQR() {
   const handleKeyDown = (e: React.KeyboardEvent, productId: string) => {
     if (e.key === "Enter") {
       updatePrice(productId)
+    }
+  }
+
+  const generateAndDownloadQR = async (product: Product) => {
+    try {
+      setGeneratingQR((prev) => ({ ...prev, [product.postId]: true }))
+
+      // Generate QR code for the product URL
+      const productUrl = `${window.location.origin}/product/${product.postId}`
+      const qrCodeDataUrl = await QRCode.toDataURL(productUrl, {
+        width: 200,
+        margin: 1,
+        color: {
+          dark: "#000000",
+          light: "#ffffff",
+        },
+      })
+
+      // Create a canvas element
+      const canvas = document.createElement("canvas")
+      const ctx = canvas.getContext("2d")
+      if (!ctx) throw new Error("Could not get canvas context")
+
+      // Set canvas dimensions
+      canvas.width = 600
+      canvas.height = 900
+
+      // Load the template image
+      const templateImage = document.createElement("img")
+      templateImage.crossOrigin = "anonymous"
+
+      templateImage.onload = () => {
+        // Draw the template image on the canvas
+        ctx.drawImage(templateImage, 0, 0, canvas.width, canvas.height)
+
+        // Load and draw the QR code
+        const qrCode = document.createElement("img")
+        qrCode.crossOrigin = "anonymous"
+
+        qrCode.onload = () => {
+          // Draw QR code in the white space
+          ctx.drawImage(qrCode, 380, 640, 150, 150)
+
+          // Add product name below the QR code
+          ctx.font = "bold 16px Arial"
+          ctx.fillStyle = "#000000"
+          ctx.textAlign = "center"
+
+          // Position the text below the QR code
+          const qrCodeCenterX = 380 + 75 // QR code X position + half width
+          const textY = 810 // Position below the QR code
+
+          // Capitalize the product name
+          const capitalizedName = product.name
+            .split(" ")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(" ")
+
+          // Wrap text for longer product names
+          const maxWidth = 150 // Same width as QR code
+          const words = capitalizedName.split(" ")
+          let line = ""
+          let y = textY
+          let lineCount = 0
+          const maxLines = 3 // Maximum number of lines to display
+
+          for (let i = 0; i < words.length; i++) {
+            // If we've reached the maximum number of lines, add ellipsis and break
+            if (lineCount >= maxLines - 1 && i < words.length - 1) {
+              ctx.fillText(line + "...", qrCodeCenterX, y)
+              break
+            }
+
+            const testLine = line + words[i] + " "
+            const metrics = ctx.measureText(testLine)
+            const testWidth = metrics.width
+
+            if (testWidth > maxWidth && i > 0) {
+              ctx.fillText(line, qrCodeCenterX, y)
+              line = words[i] + " "
+              y += 20 // Line height
+              lineCount++
+            } else {
+              line = testLine
+            }
+          }
+
+          // Draw the last line if we haven't reached the maximum
+          if (lineCount < maxLines) {
+            ctx.fillText(line, qrCodeCenterX, y)
+          }
+
+          // Convert canvas to data URL and download
+          const dataUrl = canvas.toDataURL("image/png")
+          const link = document.createElement("a")
+          link.href = dataUrl
+          link.download = `evershine-product-${product.postId}.png`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+
+          // Clean up
+          setGeneratingQR((prev) => ({ ...prev, [product.postId]: false }))
+        }
+
+        qrCode.onerror = () => {
+          setGeneratingQR((prev) => ({ ...prev, [product.postId]: false }))
+          toast.error("Failed to generate QR code")
+        }
+
+        qrCode.src = qrCodeDataUrl
+      }
+
+      templateImage.onerror = () => {
+        setGeneratingQR((prev) => ({ ...prev, [product.postId]: false }))
+        toast.error("Failed to load template image")
+      }
+
+      templateImage.src = "/assets/qr-template.png"
+    } catch (error) {
+      console.error("Error generating QR code:", error)
+      toast.error("Failed to generate QR code")
+      setGeneratingQR((prev) => ({ ...prev, [product.postId]: false }))
     }
   }
 
@@ -286,11 +411,20 @@ export default function AllQR() {
                       >
                         Preview
                       </Button>
-                      <Link href={`/product/${product.postId}`} passHref>
-                        <Button size="sm" className="bg-[#194a95] hover:bg-[#0f3a7a]">
-                          <Download className="h-4 w-4 mr-1" /> View Details
-                        </Button>
-                      </Link>
+                      <Button
+                        onClick={() => generateAndDownloadQR(product)}
+                        size="sm"
+                        disabled={!!generatingQR[product.postId]}
+                        className="bg-[#194a95] hover:bg-[#0f3a7a]"
+                      >
+                        {generatingQR[product.postId] ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4 mr-1" /> Download QR
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </td>
                 </tr>
