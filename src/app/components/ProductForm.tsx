@@ -564,7 +564,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
               <div className="col-span-5">
                 <FormLabel className="text-[#181818] font-bold block mb-2 text-lg">Size</FormLabel>
                 <div className="flex items-center gap-1">
-                  <div className="w-[100px]">
+                  <div className="w-[70px]">
                     <FormField
                       control={form.control}
                       name="sizeLength"
@@ -704,7 +704,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 <div className="flex justify-between items-center mb-2">
                   <FormLabel className="text-[#181818] font-bold text-lg">Quality Available (in sqft)</FormLabel>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500">Auto Calculate</span>
+                    <span className="text-gray-500">Auto</span>
                     <Switch
                       checked={autoCalculateQuantity}
                       onCheckedChange={setAutoCalculateQuantity}
