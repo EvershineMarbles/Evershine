@@ -482,7 +482,20 @@ export default function ProductDetail() {
             {product.finishes && (
               <div className="pb-4 border-b border-gray-200">
                 <p className="text-gray-500">Finishes</p>
-                <p className="text-lg font-bold mt-1 capitalize">{product.finishes}</p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {typeof product.finishes === "string" ? (
+                    product.finishes.split(",").map((finish, index) => (
+                      <Badge
+                        key={index}
+                        className="bg-[#194a95] hover:bg-[#194a95] text-white px-3 py-1 text-sm capitalize"
+                      >
+                        {finish.trim()}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-lg font-bold mt-1 capitalize">No finishes specified</p>
+                  )}
+                </div>
               </div>
             )}
 

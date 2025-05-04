@@ -92,7 +92,7 @@ const formSchema = z.object({
   sizeUnit: z.string().default("in"),
   numberOfPieces: z.string().optional(),
   thickness: z.string().optional(),
-  finishes: z.string().optional(),
+  finishes: z.array(z.string()).optional().default([]),
   applicationAreas: z.array(z.string()).min(1, "Please select at least one application area"),
   description: z.string().optional(),
 })
@@ -141,7 +141,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       sizeUnit: initialData?.sizeUnit || "in",
       numberOfPieces: initialData?.numberOfPieces || "",
       thickness: initialData?.thickness || "",
-      finishes: initialData?.finishes || "",
+      finishes: initialData?.finishes ? initialData.finishes.split(",") : [],
       applicationAreas: initialData?.applicationAreas ? initialData.applicationAreas.split(",") : [],
       description: initialData?.description || "",
     },
@@ -325,6 +325,11 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       const formValues = {
         ...values,
         applicationAreas: values.applicationAreas.join(","),
+      }
+
+      // Convert finishes array to string if it exists
+      if (Array.isArray(values.finishes) && values.finishes.length > 0) {
+        formValues.finishes = values.finishes.join(",")
       }
 
       // Log the processed form values
@@ -740,6 +745,48 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
               </div>
             </div>
 
+            {/* Application Areas - Changed to checkbox buttons */}
+            <div className="form-field">
+              <FormLabel className="text-[#181818] font-bold block mb-2">Application Areas</FormLabel>
+              <FormField
+                control={form.control}
+                name="applicationAreas"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {APPLICATION_AREAS.map((area) => {
+                          const isSelected = field.value?.includes(area) || false
+                          return (
+                            <button
+                              key={area}
+                              type="button"
+                              onClick={() => {
+                                const currentValues = field.value || []
+                                const newValues = isSelected
+                                  ? currentValues.filter((v) => v !== area)
+                                  : [...currentValues, area]
+                                field.onChange(newValues)
+                              }}
+                              className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
+                                isSelected
+                                  ? "bg-[#194a95] text-white border-[#194a95]"
+                                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                              } transition-colors`}
+                            >
+                              <span>{area}</span>
+                              {isSelected && <Check className="h-4 w-4 ml-2" />}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             {/* Finishes */}
             <div className="form-field">
               <FormLabel className="text-[#181818] font-bold block mb-2">Finishes</FormLabel>
@@ -751,12 +798,18 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                     <FormControl>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {["Polish", "Leather", "Flute", "River", "Satin", "Dual"].map((finish) => {
-                          const isSelected = field.value === finish.toLowerCase()
+                          const isSelected = field.value?.includes(finish.toLowerCase()) || false
                           return (
                             <button
                               key={finish}
                               type="button"
-                              onClick={() => field.onChange(finish.toLowerCase())}
+                              onClick={() => {
+                                const currentValues = field.value || []
+                                const newValues = isSelected
+                                  ? currentValues.filter((v) => v !== finish.toLowerCase())
+                                  : [...currentValues, finish.toLowerCase()]
+                                field.onChange(newValues)
+                              }}
                               className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
                                 isSelected
                                   ? "bg-[#194a95] text-white border-[#194a95]"
@@ -817,48 +870,6 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
               <p className="text-xs text-gray-500 mt-2">
                 You can upload up to 10 images. {previews.length} of 10 used.
               </p>
-            </div>
-
-            {/* Application Areas - Changed to checkbox buttons */}
-            <div className="form-field">
-              <FormLabel className="text-[#181818] font-bold block mb-2">Application Areas</FormLabel>
-              <FormField
-                control={form.control}
-                name="applicationAreas"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {APPLICATION_AREAS.map((area) => {
-                          const isSelected = field.value?.includes(area) || false
-                          return (
-                            <button
-                              key={area}
-                              type="button"
-                              onClick={() => {
-                                const currentValues = field.value || []
-                                const newValues = isSelected
-                                  ? currentValues.filter((v) => v !== area)
-                                  : [...currentValues, area]
-                                field.onChange(newValues)
-                              }}
-                              className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
-                                isSelected
-                                  ? "bg-[#194a95] text-white border-[#194a95]"
-                                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                              } transition-colors`}
-                            >
-                              <span>{area}</span>
-                              {isSelected && <Check className="h-4 w-4 ml-2" />}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             {/* Description */}
