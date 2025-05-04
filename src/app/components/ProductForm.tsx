@@ -90,6 +90,8 @@ const formSchema = z.object({
   price: z.string().min(1, "Price is required"),
   quantityAvailable: z.string().min(1, "Quantity is required"),
   size: z.string().optional(),
+  sizeLength: z.string().optional(),
+  sizeHeight: z.string().optional(),
   sizeUnit: z.string().default("inches"),
   numberOfPieces: z.string().optional(),
   thickness: z.string().optional(),
@@ -136,6 +138,8 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       price: initialData?.price || "",
       quantityAvailable: initialData?.quantityAvailable || "",
       size: initialData?.size || "",
+      sizeLength: initialData?.size ? initialData.size.split(/[x*-]/)[0] : "",
+      sizeHeight: initialData?.size ? initialData.size.split(/[x*-]/)[1] : "",
       sizeUnit: initialData?.sizeUnit || "inches",
       numberOfPieces: initialData?.numberOfPieces || "",
       thickness: initialData?.thickness || "",
@@ -158,27 +162,28 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       return
     }
 
-    const size = form.getValues("size")
+    const sizeLength = form.getValues("sizeLength")
+    const sizeHeight = form.getValues("sizeHeight")
     const sizeUnit = form.getValues("sizeUnit")
     const numberOfPieces = form.getValues("numberOfPieces")
 
     // Only calculate if we have all required values
-    if (!size || !numberOfPieces) {
+    if (!sizeLength || !sizeHeight || !numberOfPieces) {
       setSizeParseError(null)
       setCalculationPreview(null)
       return
     }
 
-    const parsedSize = parseSizeString(size)
-    if (!parsedSize) {
-      setSizeParseError("Size format should be like '60x120' (length x height)")
+    setSizeParseError(null)
+    const length = Number.parseFloat(sizeLength)
+    const height = Number.parseFloat(sizeHeight)
+    const pieces = Number.parseFloat(numberOfPieces)
+
+    if (isNaN(length) || isNaN(height) || isNaN(pieces)) {
+      setSizeParseError("Please enter valid numbers for size and pieces")
       setCalculationPreview(null)
       return
     }
-
-    setSizeParseError(null)
-    const { length, height } = parsedSize
-    const pieces = Number.parseFloat(numberOfPieces)
 
     let calculatedQuantity: number
     let formula: string
@@ -199,7 +204,13 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
     // Update the form
     form.setValue("quantityAvailable", calculatedQuantity.toString())
     setCalculationPreview(formula)
-  }, [form.watch("size"), form.watch("sizeUnit"), form.watch("numberOfPieces"), autoCalculateQuantity])
+  }, [
+    form.watch("sizeLength"),
+    form.watch("sizeHeight"),
+    form.watch("sizeUnit"),
+    form.watch("numberOfPieces"),
+    autoCalculateQuantity,
+  ])
 
   const validateImage = (file: File): boolean => {
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
@@ -549,27 +560,86 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
             </div>
 
             {/* Size with Unit, Number of Pieces, and Quantity */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="form-field">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              <div className="md:col-span-5">
                 <FormLabel className="text-[#181818] font-bold block mb-2">Size</FormLabel>
-                <div className="flex gap-2">
-                  <FormField
-                    control={form.control}
-                    name="size"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormControl>
-                          <Input
-                            placeholder="e.g., 60x120"
-                            className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
-                            {...field}
-                          />
-                        </FormControl>
-                        {sizeParseError && <p className="text-xs text-red-500 mt-1">{sizeParseError}</p>}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <FormField
+                      control={form.control}
+                      name="sizeLength"
+                      render={({ field }) => (
+                        <FormItem className="mb-0">
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                placeholder="Length"
+                                className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95] pl-8"
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e)
+                                  // Update the size field with the combined value
+                                  const length = e.target.value
+                                  const height = form.getValues("sizeHeight") || ""
+                                  if (length && height) {
+                                    form.setValue("size", `${length}x${height}`)
+                                  } else {
+                                    form.setValue("size", "")
+                                  }
+                                }}
+                              />
+                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                                L
+                              </span>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-center w-6">
+                    <span className="text-gray-500 text-lg font-bold">×</span>
+                  </div>
+
+                  <div className="relative flex-1">
+                    <FormField
+                      control={form.control}
+                      name="sizeHeight"
+                      render={({ field }) => (
+                        <FormItem className="mb-0">
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                placeholder="Height"
+                                className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95] pl-8"
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e)
+                                  // Update the size field with the combined value
+                                  const height = e.target.value
+                                  const length = form.getValues("sizeLength") || ""
+                                  if (length && height) {
+                                    form.setValue("size", `${length}x${height}`)
+                                  } else {
+                                    form.setValue("size", "")
+                                  }
+                                }}
+                              />
+                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                                H
+                              </span>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
                     name="sizeUnit"
@@ -595,11 +665,25 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                     )}
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Format: length x height (e.g., 60x120)</p>
+
+                {/* Hidden field to store the combined size value */}
+                <FormField
+                  control={form.control}
+                  name="size"
+                  render={({ field }) => (
+                    <FormItem className="hidden">
+                      <FormControl>
+                        <Input type="hidden" {...field} />
+                      </FormControl>
+                      {sizeParseError && <p className="text-xs text-red-500 mt-1">{sizeParseError}</p>}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              <div className="form-field">
-                <FormLabel className="text-[#181818] font-bold block mb-2">No. of Pieces</FormLabel>
+              <div className="md:col-span-1">
+                <FormLabel className="text-[#181818] font-bold block mb-2">Pieces</FormLabel>
                 <FormField
                   control={form.control}
                   name="numberOfPieces"
@@ -608,8 +692,8 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="Enter quantity"
-                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95]"
+                          placeholder="Qty"
+                          className="rounded-md border-[#e3e3e3] h-12 focus-visible:ring-[#194a95] w-full"
                           {...field}
                         />
                       </FormControl>
@@ -619,7 +703,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 />
               </div>
 
-              <div className="form-field">
+              <div className="md:col-span-6">
                 <div className="flex justify-between items-center mb-2">
                   <FormLabel className="text-[#181818] font-bold">Quality Available (in sqft)</FormLabel>
                   <TooltipProvider>
