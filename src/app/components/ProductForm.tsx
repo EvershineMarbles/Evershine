@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
+import { Home } from "lucide-react"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -444,6 +445,20 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
   return (
     <div className="max-w-3xl mx-auto bg-white min-h-screen">
       {/* Header */}
+
+        {/* Dashboard Header Strip */}
+        <div className="w-full bg-[rgb(25,74,149)] py-4 px-6 shadow-md">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <h1 className="text-white text-xl font-medium">Evershine Dashboard</h1>
+          <button
+            onClick={() => router.push("https://evershine-two.vercel.app/")}
+            className="flex items-center text-white hover:text-gray-200 transition-colors"
+          >
+            <Home className="h-5 w-5" />
+            <span className="ml-2">Home</span>
+          </button>
+        </div>
+      </div>
       <div className="sticky top-0 z-50 bg-white">
         <div className="p-4">
           <button

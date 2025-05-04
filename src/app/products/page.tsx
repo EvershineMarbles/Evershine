@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import axios from "axios"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Search, Pencil, ArrowLeft, Loader2, Home, Grid, List } from 'lucide-react'
+import { Search, Pencil, ArrowLeft, Loader2, Home, Grid, List } from "lucide-react"
 import Image from "next/image"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -46,6 +46,15 @@ export default function Products() {
     }
   }
 
+/*************  ✨ Windsurf Command ⭐  *************/
+  /**
+   * Handles the edit button click event. Prevents default behavior of the link.
+   * Makes a GET request to the API to fetch the product data.
+   * If the request is successful, it redirects to the edit product page.
+   * If the request fails, it will throw an error and display an alert.
+   * Finally, it resets the edit loading state.
+   */
+/*******  59b722cd-d292-445e-b8bb-d87eded0e788  *******/
   const handleEdit = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault()
     try {
@@ -133,10 +142,7 @@ export default function Products() {
         {/* View Toggle and Add Button */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div className="flex items-center gap-2 border rounded-lg overflow-hidden">
-            <button
-              className="flex items-center gap-1 px-4 py-2 bg-[#194a95] text-white"
-              aria-label="Grid view"
-            >
+            <button className="flex items-center gap-1 px-4 py-2 bg-[#194a95] text-white" aria-label="Grid view">
               <Grid className="h-4 w-4" />
               <span>Grid</span>
             </button>
@@ -164,7 +170,7 @@ export default function Products() {
         </p>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 mb-8">
           {filteredProducts.map((product) => (
             <div
               key={product._id}
