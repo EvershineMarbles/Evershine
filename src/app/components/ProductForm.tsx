@@ -141,7 +141,11 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
       sizeUnit: initialData?.sizeUnit || "in",
       numberOfPieces: initialData?.numberOfPieces || "",
       thickness: initialData?.thickness || "",
-      finishes: initialData?.finishes ? initialData.finishes.split(",") : [],
+      finishes: initialData?.finishes
+        ? typeof initialData.finishes === "string"
+          ? initialData.finishes.split(",").map((f) => f.trim().toLowerCase())
+          : initialData.finishes
+        : [],
       applicationAreas: initialData?.applicationAreas ? initialData.applicationAreas.split(",") : [],
       description: initialData?.description || "",
     },
