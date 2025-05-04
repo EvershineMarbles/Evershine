@@ -469,7 +469,6 @@ export default function ProductDetail() {
                       <TooltipTrigger asChild>
                         <div className="flex items-center text-gray-500 cursor-help">
                           <Calculator className="h-4 w-4 mr-1" />
-                          <span className="text-xs">Auto-calculated</span>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>

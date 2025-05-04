@@ -2,10 +2,10 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import axios from "axios"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Download, Loader2, Search, Home, Check, X, Edit2 } from "lucide-react"
+import { ArrowLeft, Download, Loader2, Search, Home, Check } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import QRCode from "qrcode"
@@ -33,28 +33,27 @@ export default function ProductQRList() {
   const [generatingQR, setGeneratingQR] = useState<Record<string, boolean>>({})
   const [qrPreviewUrl, setQrPreviewUrl] = useState<string | null>(null)
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null)
-  const [editingPrice, setEditingPrice] = useState<string | null>(null)
-  const [newPrice, setNewPrice] = useState<string>("")
+  const [priceValues, setPriceValues] = useState<Record<string, string>>({})
   const [updatingPrice, setUpdatingPrice] = useState<Record<string, boolean>>({})
-  const priceInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchProducts()
   }, [])
-
-  useEffect(() => {
-    // Focus the input when editing starts
-    if (editingPrice && priceInputRef.current) {
-      priceInputRef.current.focus()
-    }
-  }, [editingPrice])
 
   const fetchProducts = async () => {
     try {
       setLoading(true)
       const response = await axios.get(`${API_URL}/api/getAllProducts`)
       if (response.data.success) {
-        setProducts(response.data.data)
+        const productsData = response.data.data
+        setProducts(productsData)
+
+        // Initialize price values for all products
+        const initialPriceValues: Record<string, string> = {}
+        productsData.forEach((product: Product) => {
+          initialPriceValues[product.postId] = product.price.toString()
+        })
+        setPriceValues(initialPriceValues)
       }
     } catch (error) {
       console.error("Error fetching products:", error)
@@ -224,18 +223,17 @@ export default function ProductQRList() {
     setPreviewProduct(null)
   }
 
-  const startEditingPrice = (productId: string, currentPrice: number) => {
-    setEditingPrice(productId)
-    setNewPrice(currentPrice.toString())
-  }
-
-  const cancelEditingPrice = () => {
-    setEditingPrice(null)
-    setNewPrice("")
+  const handlePriceChange = (productId: string, value: string) => {
+    setPriceValues((prev) => ({
+      ...prev,
+      [productId]: value,
+    }))
   }
 
   const updatePrice = async (productId: string) => {
     try {
+      const newPrice = priceValues[productId]
+
       if (!newPrice || isNaN(Number(newPrice)) || Number(newPrice) <= 0) {
         toast.error("Please enter a valid price")
         return
@@ -255,8 +253,6 @@ export default function ProductQRList() {
         )
 
         toast.success("Price updated successfully")
-        setEditingPrice(null)
-        setNewPrice("")
       } else {
         toast.error(response.data.msg || "Failed to update price")
       }
@@ -271,8 +267,6 @@ export default function ProductQRList() {
   const handleKeyDown = (e: React.KeyboardEvent, productId: string) => {
     if (e.key === "Enter") {
       updatePrice(productId)
-    } else if (e.key === "Escape") {
-      cancelEditingPrice()
     }
   }
 
@@ -373,48 +367,32 @@ export default function ProductQRList() {
                     </div>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
-                    {editingPrice === product.postId ? (
-                      <div className="flex items-center space-x-2">
-                        <div className="relative">
-                          <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
-                          <input
-                            ref={priceInputRef}
-                            type="number"
-                            value={newPrice}
-                            onChange={(e) => setNewPrice(e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(e, product.postId)}
-                            className="pl-6 pr-2 py-1 w-24 border rounded focus:outline-none focus:ring-2 focus:ring-[#194a95]"
-                            min="1"
-                            step="any"
-                          />
-                        </div>
-                        <button
-                          onClick={() => updatePrice(product.postId)}
-                          disabled={updatingPrice[product.postId]}
-                          className="p-1 text-green-600 hover:text-green-800"
-                        >
-                          {updatingPrice[product.postId] ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Check className="h-4 w-4" />
-                          )}
-                        </button>
-                        <button onClick={cancelEditingPrice} className="p-1 text-red-600 hover:text-red-800">
-                          <X className="h-4 w-4" />
-                        </button>
+                    <div className="flex items-center space-x-2">
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
+                        <input
+                          type="number"
+                          value={priceValues[product.postId] || ""}
+                          onChange={(e) => handlePriceChange(product.postId, e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(e, product.postId)}
+                          className="pl-6 pr-2 py-1 w-24 border rounded focus:outline-none focus:ring-2 focus:ring-[#194a95]"
+                          min="1"
+                          step="any"
+                        />
                       </div>
-                    ) : (
-                      <div className="flex items-center">
-                        <div className="text-sm text-gray-900">₹{product.price}/per sqft</div>
-                        <button
-                          onClick={() => startEditingPrice(product.postId, product.price)}
-                          className="ml-2 p-1 text-gray-400 hover:text-gray-600"
-                          title="Edit price"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    )}
+                      <button
+                        onClick={() => updatePrice(product.postId)}
+                        disabled={updatingPrice[product.postId]}
+                        className="p-1 text-green-600 hover:text-green-800"
+                      >
+                        {updatingPrice[product.postId] ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </button>
+                      <span className="text-xs text-gray-500">/per sqft</span>
+                    </div>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-right">
                     <div className="flex justify-end space-x-2">

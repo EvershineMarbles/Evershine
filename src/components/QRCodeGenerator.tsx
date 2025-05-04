@@ -95,16 +95,16 @@ export default function QRCodeGenerator({
         const qrCode = document.createElement("img")
         qrCode.crossOrigin = "anonymous"
         qrCode.onload = () => {
-          // Draw QR code with potentially adjusted position
-          ctx.drawImage(qrCode, qrCodeX, qrCodeY, qrCodeSize, qrCodeSize)
+          // Move QR code higher on the template
+          ctx.drawImage(qrCode, 380, 620, qrCodeSize, qrCodeSize)
 
           // Add product name directly below the QR code in the white area
           ctx.fillStyle = "#000000"
           ctx.textAlign = "center"
 
           // Position the text below the QR code in the white area
-          const qrCodeCenterX = qrCodeX + qrCodeSize / 2
-          const textY = qrCodeY + qrCodeSize + 20 // 20px below the QR code
+          const qrCodeCenterX = 380 + 75 // QR code X position + half width
+          const textY = 790 // Adjusted position below the QR code
 
           // Wrap text for longer product names
           const words = capitalizedName.split(" ")
@@ -127,7 +127,7 @@ export default function QRCodeGenerator({
             if (testWidth > maxWidth && i > 0) {
               ctx.fillText(line, qrCodeCenterX, y)
               line = words[i] + " "
-              y += 20 // Line height
+              y += 22 // Increased line height for better readability
               lineCount++
             } else {
               line = testLine
