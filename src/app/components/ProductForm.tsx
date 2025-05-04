@@ -128,8 +128,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
   const [autoCalculateQuantity, setAutoCalculateQuantity] = useState(true)
   const [sizeParseError, setSizeParseError] = useState<string | null>(null)
   const [calculationPreview, setCalculationPreview] = useState<string | null>(null)
-  const [lengthFocused, setLengthFocused] = useState(false)
-  const [heightFocused, setHeightFocused] = useState(false)
+  // No need for focus state variables
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -576,19 +575,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                               type="text"
                               inputMode="numeric"
                               placeholder="L"
-                              className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95]"
-                              onFocus={() => setLengthFocused(true)}
-                              onBlur={() => {
-                                setLengthFocused(false)
-                                // Update the size field with the combined value
-                                const length = field.value
-                                const height = form.getValues("sizeHeight") || ""
-                                if (length && height) {
-                                  form.setValue("size", `${length}x${height}`)
-                                } else {
-                                  form.setValue("size", "")
-                                }
-                              }}
+                              className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95] pl-3"
                               {...field}
                               onChange={(e) => {
                                 field.onChange(e)
@@ -624,19 +611,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                               type="text"
                               inputMode="numeric"
                               placeholder="H"
-                              className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95]"
-                              onFocus={() => setHeightFocused(true)}
-                              onBlur={() => {
-                                setHeightFocused(false)
-                                // Update the size field with the combined value
-                                const height = field.value
-                                const length = form.getValues("sizeLength") || ""
-                                if (length && height) {
-                                  form.setValue("size", `${length}x${height}`)
-                                } else {
-                                  form.setValue("size", "")
-                                }
-                              }}
+                              className="rounded-md border-[#e3e3e3] h-14 text-lg focus-visible:ring-[#194a95] pl-3"
                               {...field}
                               onChange={(e) => {
                                 field.onChange(e)
@@ -664,7 +639,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                       <FormItem>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="rounded-md border-[#e3e3e3] h-14 focus:ring-[#194a95] w-16 text-lg">
+                            <SelectTrigger className="rounded-md border-[#e3e3e3] h-14 focus:ring-[#194a95] w-14 text-lg">
                               <SelectValue placeholder="Unit" />
                             </SelectTrigger>
                           </FormControl>
