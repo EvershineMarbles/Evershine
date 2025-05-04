@@ -546,7 +546,7 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
               </div>
 
               <div className="form-field">
-                <FormLabel className="text-[#181818] font-bold block mb-2">Thickness</FormLabel>
+                <FormLabel className="text-[#181818] font-bold block mb-2">Thickness (in mm)</FormLabel>
                 <FormField
                   control={form.control}
                   name="thickness"
