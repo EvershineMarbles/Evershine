@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Download, Loader2, Search, Home, Check } from "lucide-react"
+import { ArrowLeft, Download, Loader2, Search, Home, Grid, List, Check } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import QRCode from "qrcode"
@@ -26,7 +26,7 @@ interface Product {
   size?: string
 }
 
-export default function ProductQRList() {
+export default function AllQR() {
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -300,7 +300,7 @@ export default function ProductQRList() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
             <button
-              onClick={() => router.back()}
+              onClick={() => router.push("https://evershine-two.vercel.app/")}
               className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
             >
               <ArrowLeft className="h-6 w-6" />
@@ -313,7 +313,7 @@ export default function ProductQRList() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6">
         {/* Header with Search */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <h1 className="text-4xl font-bold text-[#181818]">Product QR Codes</h1>
+          <h1 className="text-4xl font-bold text-[#181818]">All Products</h1>
           <div className="relative w-full md:w-auto">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -326,6 +326,31 @@ export default function ProductQRList() {
               />
             </div>
           </div>
+        </div>
+
+        {/* View Toggle and Add Button */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div className="flex items-center gap-2 border rounded-lg overflow-hidden">
+            <button
+              onClick={() => router.push("/products")}
+              className="flex items-center gap-1 px-4 py-2 text-gray-600 hover:bg-gray-100"
+              aria-label="Grid view"
+            >
+              <Grid className="h-4 w-4" />
+              <span>Grid</span>
+            </button>
+            <button className="flex items-center gap-1 px-4 py-2 bg-[#194a95] text-white" aria-label="List view">
+              <List className="h-4 w-4" />
+              <span>List</span>
+            </button>
+          </div>
+          <button
+            onClick={() => router.push("/add-product")}
+            className="px-6 py-3 rounded-lg bg-[#194a95] text-white w-full md:w-auto justify-center
+                     hover:bg-[#0f3a7a] transition-colors active:transform active:scale-95"
+          >
+            Add New Product
+          </button>
         </div>
 
         {/* Products Table */}
