@@ -63,11 +63,23 @@ const MOCKUPS = [
   },
 ]
 
+// Function to proxy external images through our own API
+const getProxiedImageUrl = (originalUrl: string) => {
+  // If it's already a local URL, no need to proxy
+  if (originalUrl.startsWith("/")) {
+    return originalUrl
+  }
+
+  // Otherwise, proxy through our API
+  return `/api/proxy-image?url=${encodeURIComponent(originalUrl)}`
+}
+
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [visualizations, setVisualizations] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [selectedArea, setSelectedArea] = useState<Record<string, string>>({})
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
+  const [error, setError] = useState<string | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   // Initialize loading and selected areas
@@ -96,6 +108,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const generateVisualization = async (mockupId: string, areaName: string) => {
     try {
       setLoading((prev) => ({ ...prev, [mockupId]: true }))
+      setError(null)
 
       const mockup = MOCKUPS.find((m) => m.id === mockupId)
       if (!mockup) return
@@ -133,11 +146,20 @@ export default function ProductVisualizer({ productImage, productName }: Product
 
         mockupImage.onload = checkAllLoaded
         textureImage.onload = checkAllLoaded
-        mockupImage.onerror = reject
-        textureImage.onerror = reject
 
-        mockupImage.src = mockup.src
-        textureImage.src = productImage
+        mockupImage.onerror = (e) => {
+          console.error("Error loading mockup image:", e)
+          reject(new Error("Failed to load mockup image"))
+        }
+
+        textureImage.onerror = (e) => {
+          console.error("Error loading texture image:", e)
+          reject(new Error("Failed to load product texture"))
+        }
+
+        // Use the proxy for the product image (which comes from S3)
+        mockupImage.src = mockup.src // Local image, no need to proxy
+        textureImage.src = getProxiedImageUrl(productImage) // External image, use proxy
       })
 
       await loadImages
@@ -175,6 +197,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
       }))
     } catch (error) {
       console.error("Error generating visualization:", error)
+      setError(error instanceof Error ? error.message : "Failed to generate visualization")
     } finally {
       setLoading((prev) => ({ ...prev, [mockupId]: false }))
     }
@@ -267,8 +290,12 @@ export default function ProductVisualizer({ productImage, productName }: Product
                     />
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-[400px]">
-                    <p>Failed to generate visualization</p>
+                  <div className="flex items-center justify-center h-[400px] text-center p-4">
+                    <div>
+                      <p className="text-red-500 font-medium mb-2">Failed to generate visualization</p>
+                      {error && <p className="text-sm text-gray-600">{error}</p>}
+                      <p className="text-sm text-gray-600 mt-2">Try refreshing or using a different product image</p>
+                    </div>
                   </div>
                 )}
               </div>
