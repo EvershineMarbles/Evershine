@@ -46,11 +46,9 @@ export default function QRCodeGenerator({
     try {
       setIsGenerating(true)
 
-      // Generate QR code for the router endpoint
-      // This will handle redirecting to the appropriate URL based on user role
-      const qrRouterUrl = `${window.location.origin}/api/qr?productId=${productId}`
-
-      const qrCodeDataUrl = await QRCode.toDataURL(qrRouterUrl, {
+      // Generate QR code for the product URL
+      const productUrl = `${window.location.origin}/product/${productId}`
+      const qrCodeDataUrl = await QRCode.toDataURL(productUrl, {
         width: 200,
         margin: 1,
         color: {
