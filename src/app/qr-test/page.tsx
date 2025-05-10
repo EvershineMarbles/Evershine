@@ -1,72 +1,135 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import SimpleQRGenerator from "@/components/SimpleQRGenerator"
+import { Card } from "@/components/ui/card"
+import QRCode from "qrcode"
+import Image from "next/image"
 
-export default function QRTestPage() {
+export default function QRTestCookiesPage() {
   const [productId, setProductId] = useState("")
-  const [showGenerator, setShowGenerator] = useState(false)
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
+  const [role, setRole] = useState<"admin" | "agent" | "public">("public")
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (productId) {
-      setShowGenerator(true)
+  const setCookie = (role: "admin" | "agent" | "public") => {
+    if (role === "public") {
+      // Clear the cookie
+      document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+    } else {
+      // Set a cookie with the role
+      const value = role === "admin" ? "admin-token" : "agent-token"
+      document.cookie = `auth_token=${value}; path=/; max-age=3600`
+    }
+    setRole(role)
+  }
+
+  const generateQR = async () => {
+    if (!productId) return
+
+    try {
+      // Generate QR code for the router endpoint
+      const qrRouterUrl = `${window.location.origin}/api/qr?productId=${productId}`
+
+      const qrCodeDataUrl = await QRCode.toDataURL(qrRouterUrl, {
+        width: 300,
+        margin: 10,
+        color: {
+          dark: "#000000",
+          light: "#ffffff",
+        },
+      })
+
+      setQrCodeUrl(qrCodeDataUrl)
+    } catch (error) {
+      console.error("Error generating QR code:", error)
     }
   }
 
   return (
     <div className="min-h-screen bg-white p-6">
       <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-6 text-center">QR Code Routing Test</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center">QR Routing Test with Cookies</h1>
 
-        {!showGenerator ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="productId" className="block text-sm font-medium text-gray-700 mb-1">
-                Product ID
-              </label>
-              <Input
-                id="productId"
-                value={productId}
-                onChange={(e) => setProductId(e.target.value)}
-                placeholder="Enter product ID"
-                className="w-full"
-                required
-              />
-            </div>
-
-            <Button type="submit" className="w-full bg-[#194a95] hover:bg-[#0f3a7a]">
-              Continue
+        <Card className="p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">1. Set User Role</h2>
+          <div className="flex gap-2 mb-4">
+            <Button
+              onClick={() => setCookie("admin")}
+              variant={role === "admin" ? "default" : "outline"}
+              className={role === "admin" ? "bg-[#194a95]" : ""}
+            >
+              Admin
             </Button>
-          </form>
-        ) : (
-          <div className="space-y-6">
-            <SimpleQRGenerator productId={productId} />
-
-            <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h2 className="text-lg font-medium mb-2">Testing Instructions</h2>
-              <ol className="list-decimal pl-5 space-y-2 text-sm">
-                <li>Generate and scan the QR code with your phone</li>
-                <li>It will redirect to the appropriate URL based on your role</li>
-                <li>
-                  <strong>For testing different roles:</strong>
-                  <ul className="list-disc pl-5 mt-1">
-                    <li>Admin: Set a cookie named "auth_token" with value "admin-token"</li>
-                    <li>Agent: Set a cookie named "auth_token" with value "agent-token"</li>
-                    <li>Public: Don't set any cookie or clear cookies</li>
-                  </ul>
-                </li>
-              </ol>
-            </div>
-
-            <Button onClick={() => setShowGenerator(false)} variant="outline" className="w-full">
-              Try Another Product ID
+            <Button
+              onClick={() => setCookie("agent")}
+              variant={role === "agent" ? "default" : "outline"}
+              className={role === "agent" ? "bg-[#194a95]" : ""}
+            >
+              Agent
+            </Button>
+            <Button
+              onClick={() => setCookie("public")}
+              variant={role === "public" ? "default" : "outline"}
+              className={role === "public" ? "bg-[#194a95]" : ""}
+            >
+              Public
             </Button>
           </div>
+          <p className="text-sm text-gray-500">
+            Current role: <span className="font-medium">{role}</span>
+          </p>
+        </Card>
+
+        <Card className="p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">2. Enter Product ID</h2>
+          <div className="flex gap-2">
+            <Input
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+              placeholder="Enter product ID"
+              className="flex-1"
+            />
+            <Button onClick={generateQR} className="bg-[#194a95]">
+              Generate
+            </Button>
+          </div>
+        </Card>
+
+        {qrCodeUrl && (
+          <Card className="p-6">
+            <h2 className="text-lg font-semibold mb-4">3. Scan QR Code</h2>
+            <div className="flex justify-center mb-4">
+              <div className="border rounded-lg p-2 bg-white">
+                <Image
+                  src={qrCodeUrl || "/placeholder.svg"}
+                  alt="QR Code"
+                  width={250}
+                  height={250}
+                  className="object-contain"
+                />
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 text-center">
+              This QR code will redirect to the {role} view for product ID: {productId}
+            </p>
+            <div className="mt-4 p-3 bg-gray-50 rounded-md text-xs text-gray-600">
+              <p className="font-medium mb-1">Expected redirect:</p>
+              {role === "admin" && (
+                <p className="break-all">https://evershine-agent.vercel.app/admin/dashboard/product/{productId}</p>
+              )}
+              {role === "agent" && (
+                <p className="break-all">
+                  https://evershine-agent.vercel.app/client-dashboard/1745776105921559/product/{productId}
+                </p>
+              )}
+              {role === "public" && (
+                <p className="break-all">
+                  {window.location.origin}/product/{productId}?qr=true
+                </p>
+              )}
+            </div>
+          </Card>
         )}
       </div>
     </div>

@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 
-// Hardcoded URLs for testing
+// Hardcoded URLs for testing - both pointing to the same agent app
 const AGENT_APP_URL = "https://evershine-agent.vercel.app"
 const ADMIN_APP_URL = "https://evershine-agent.vercel.app"
-const PUBLIC_APP_URL = "https://evershine-two.vercel.app"
 
 // Simplified role check for testing
 function getUserRole(token: string | undefined): string {
@@ -35,22 +34,25 @@ export async function GET(request: Request) {
     // Get user role (simplified for testing)
     const userRole = getUserRole(token)
 
-    // For testing purposes, let's log the role and product ID
     console.log(`Routing user with role: ${userRole} to product: ${productId}`)
 
-    // Redirect based on user role
+    // Determine the redirect URL based on user role
+    let redirectUrl
+
     if (userRole === "admin") {
       // Admin URL format: /admin/dashboard/product/{productId}
-      return NextResponse.redirect(`${ADMIN_APP_URL}/admin/dashboard/product/${productId}`)
+      redirectUrl = `${ADMIN_APP_URL}/admin/dashboard/product/${productId}`
     } else if (userRole === "agent") {
       // Agent URL format: /client-dashboard/{clientId}/product/{productId}
-      // Using a hardcoded clientId for testing
       const clientId = "1745776105921559"
-      return NextResponse.redirect(`${AGENT_APP_URL}/client-dashboard/${clientId}/product/${productId}`)
+      redirectUrl = `${AGENT_APP_URL}/client-dashboard/${clientId}/product/${productId}`
     } else {
-      // Public URL format: /product/{productId}
-      return NextResponse.redirect(`${PUBLIC_APP_URL}/product/${productId}`)
+      // Public URL - add ?qr=true to indicate it came from a QR code
+      redirectUrl = `${request.headers.get("origin") || "https://evershine-two.vercel.app"}/product/${productId}?qr=true`
     }
+
+    console.log(`Redirecting to: ${redirectUrl}`)
+    return NextResponse.redirect(redirectUrl)
   } catch (error) {
     console.error("QR routing error:", error)
     return NextResponse.json({ success: false, message: "Error processing QR code" }, { status: 500 })
