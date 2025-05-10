@@ -10,13 +10,13 @@ export async function GET(request: Request) {
 
   try {
     const response = await fetch(url)
-    
+
     if (!response.ok) {
-      return new NextResponse(`Failed to fetch image: ${response.statusText}`, { 
-        status: response.status 
+      return new NextResponse(`Failed to fetch image: ${response.statusText}`, {
+        status: response.status,
       })
     }
-    
+
     const blob = await response.blob()
 
     // Return the image with appropriate headers
@@ -24,6 +24,7 @@ export async function GET(request: Request) {
       headers: {
         "Content-Type": response.headers.get("Content-Type") || "image/jpeg",
         "Cache-Control": "public, max-age=86400",
+        "Access-Control-Allow-Origin": "*",
       },
     })
   } catch (error) {
