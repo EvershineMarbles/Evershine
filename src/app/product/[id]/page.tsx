@@ -3,7 +3,17 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Trash2, ChevronDown, ChevronUp, Calculator, Download } from 'lucide-react'
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  Calculator,
+  Download,
+} from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,6 +30,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import QRCodeGenerator from "@/components/QRCodeGenerator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import ProductVisualizer from "@/components/ProductVisualizer"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -87,7 +98,10 @@ const calculateQuantityFormula = (size: string, sizeUnit: string, numberOfPieces
   if (!size || !numberOfPieces) return null
 
   // Parse size (e.g., "60x120")
-  const match = size.replace(/\s+/g, "").match(/^(\d+(?:\.\d+)?)[x*-](\d+(?:\.\d+)?)$/)
+  const match = size
+    .replace(/\s+/g, "")
+    .toLowerCase()
+    .match(/^(\d+(?:\.\d+)?)[x*-](\d+(?:\.\d+)?)$/)
   if (!match) return null
 
   const length = Number.parseFloat(match[1])
@@ -115,6 +129,7 @@ export default function ProductDetail() {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
   const [showFullDescription, setShowFullDescription] = useState(false)
   const [quantityFormula, setQuantityFormula] = useState<string | null>(null)
+  const [showVisualizer, setShowVisualizer] = useState(false)
 
   // Update the useEffect to use this enhanced debugging
   useEffect(() => {
@@ -574,6 +589,16 @@ export default function ProductDetail() {
               </div>
             </div>
 
+            {/* Visualizer Button */}
+            <div className="pb-4 border-b border-gray-200">
+              <Button
+                onClick={() => setShowVisualizer(!showVisualizer)}
+                className="w-full bg-[#194a95] hover:bg-[#0f3a7a]"
+              >
+                {showVisualizer ? "Hide Visualizer" : "Show Product Visualizer"}
+              </Button>
+            </div>
+
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-4">
               <Button
@@ -627,6 +652,13 @@ export default function ProductDetail() {
           </div>
         </div>
 
+        {/* Product Visualizer Section */}
+        {showVisualizer && product.image.length > 0 && (
+          <div className="max-w-6xl mx-auto mt-12 border-t pt-8">
+            <ProductVisualizer productImage={product.image[0]} productName={product.name} />
+          </div>
+        )}
+
         {/* QR Code Section */}
         <div className="max-w-6xl mx-auto mt-12 border-t pt-8">
           <h2 className="text-2xl font-bold mb-6">Product QR Code</h2>
@@ -640,12 +672,10 @@ export default function ProductDetail() {
             />
           )}
         </div>
-        
+
         {/* Disclaimer */}
         <div className="max-w-6xl mx-auto mt-8 pt-4 border-t">
-          <p className="text-gray-500 text-sm italic text-center">
-            Disclaimer: Actual quantity can differ
-          </p>
+          <p className="text-gray-500 text-sm italic text-center">Disclaimer: Actual quantity can differ</p>
         </div>
       </div>
     </div>
