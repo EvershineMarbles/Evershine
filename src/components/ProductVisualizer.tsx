@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
-import { Download, Loader2, RefreshCw } from "lucide-react"
+import { Download, Loader2, RefreshCw, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface ProductVisualizerProps {
@@ -63,22 +63,12 @@ const MOCKUPS = [
   },
 ]
 
-// Function to proxy external images through our own API
-const getProxiedImageUrl = (originalUrl: string) => {
-  // If it's already a local URL, no need to proxy
-  if (originalUrl.startsWith("/")) {
-    return originalUrl
-  }
-
-  // Otherwise, proxy through our API
-  return `/api/proxy-image?url=${encodeURIComponent(originalUrl)}`
-}
-
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
+  const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
+  const [useFallback, setUseFallback] = useState(false)
   const [visualizations, setVisualizations] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [selectedArea, setSelectedArea] = useState<Record<string, string>>({})
-  const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const [error, setError] = useState<string | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -98,12 +88,12 @@ export default function ProductVisualizer({ productImage, productName }: Product
 
   // Generate visualizations when component mounts or product image changes
   useEffect(() => {
-    if (productImage) {
+    if (productImage && !useFallback) {
       MOCKUPS.forEach((mockup) => {
         generateVisualization(mockup.id, selectedArea[mockup.id])
       })
     }
-  }, [productImage])
+  }, [productImage, useFallback])
 
   const generateVisualization = async (mockupId: string, areaName: string) => {
     try {
@@ -126,11 +116,11 @@ export default function ProductVisualizer({ productImage, productName }: Product
       canvas.width = 1000
       canvas.height = 1000
 
-      // Load the mockup image - using document.createElement instead of new Image()
+      // Load the mockup image
       const mockupImage = document.createElement("img")
       mockupImage.crossOrigin = "anonymous"
 
-      // Load the product texture - using document.createElement instead of new Image()
+      // Load the product texture
       const textureImage = document.createElement("img")
       textureImage.crossOrigin = "anonymous"
 
@@ -157,47 +147,60 @@ export default function ProductVisualizer({ productImage, productName }: Product
           reject(new Error("Failed to load product texture"))
         }
 
-        // Use the proxy for the product image (which comes from S3)
-        mockupImage.src = mockup.src // Local image, no need to proxy
-        textureImage.src = getProxiedImageUrl(productImage) // External image, use proxy
+        // Use local paths for mockups
+        mockupImage.src = mockup.src
+
+        // For product image, try direct loading first
+        // If this fails due to CORS, the error handler will catch it
+        textureImage.src = productImage
       })
 
-      await loadImages
+      try {
+        await loadImages
 
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      // Draw the mockup image
-      ctx.drawImage(mockupImage, 0, 0, canvas.width, canvas.height)
+        // Draw the mockup image
+        ctx.drawImage(mockupImage, 0, 0, canvas.width, canvas.height)
 
-      // Create a pattern from the texture
-      const pattern = ctx.createPattern(textureImage, "repeat")
-      if (!pattern) return
+        // Create a pattern from the texture
+        const pattern = ctx.createPattern(textureImage, "repeat")
+        if (!pattern) throw new Error("Failed to create pattern")
 
-      // Save the current state
-      ctx.save()
+        // Save the current state
+        ctx.save()
 
-      // Apply the texture to the target area
-      ctx.globalAlpha = targetArea.opacity
-      ctx.globalCompositeOperation = targetArea.blendMode as GlobalCompositeOperation
+        // Apply the texture to the target area
+        ctx.globalAlpha = targetArea.opacity
+        ctx.globalCompositeOperation = targetArea.blendMode as GlobalCompositeOperation
 
-      ctx.fillStyle = pattern
-      ctx.fillRect(targetArea.x, targetArea.y, targetArea.width, targetArea.height)
+        ctx.fillStyle = pattern
+        ctx.fillRect(targetArea.x, targetArea.y, targetArea.width, targetArea.height)
 
-      // Restore the canvas state
-      ctx.restore()
+        // Restore the canvas state
+        ctx.restore()
 
-      // Convert canvas to data URL
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.9)
+        // Convert canvas to data URL
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.9)
 
-      // Update visualizations state
-      setVisualizations((prev) => ({
-        ...prev,
-        [mockupId]: dataUrl,
-      }))
+        // Update visualizations state
+        setVisualizations((prev) => ({
+          ...prev,
+          [mockupId]: dataUrl,
+        }))
+      } catch (error) {
+        console.error("Canvas operation failed:", error)
+        throw error
+      }
     } catch (error) {
       console.error("Error generating visualization:", error)
       setError(error instanceof Error ? error.message : "Failed to generate visualization")
+
+      // If we've tried and failed, switch to fallback mode
+      if (!useFallback) {
+        setUseFallback(true)
+      }
     } finally {
       setLoading((prev) => ({ ...prev, [mockupId]: false }))
     }
@@ -205,10 +208,27 @@ export default function ProductVisualizer({ productImage, productName }: Product
 
   const handleAreaChange = (mockupId: string, areaName: string) => {
     setSelectedArea((prev) => ({ ...prev, [mockupId]: areaName }))
-    generateVisualization(mockupId, areaName)
+    if (!useFallback) {
+      generateVisualization(mockupId, areaName)
+    }
   }
 
   const handleDownload = (mockupId: string) => {
+    // If we're in fallback mode, just download the mockup image
+    if (useFallback) {
+      const mockup = MOCKUPS.find((m) => m.id === mockupId)
+      if (!mockup) return
+
+      const link = document.createElement("a")
+      link.href = mockup.src
+      link.download = `${productName.replace(/\s+/g, "-").toLowerCase()}-${mockupId}-visualization.jpg`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      return
+    }
+
+    // Otherwise download the generated visualization
     const dataUrl = visualizations[mockupId]
     if (!dataUrl) return
 
@@ -221,9 +241,13 @@ export default function ProductVisualizer({ productImage, productName }: Product
   }
 
   const handleRegenerateAll = () => {
-    MOCKUPS.forEach((mockup) => {
-      generateVisualization(mockup.id, selectedArea[mockup.id])
-    })
+    if (useFallback) {
+      setUseFallback(false)
+    } else {
+      MOCKUPS.forEach((mockup) => {
+        generateVisualization(mockup.id, selectedArea[mockup.id])
+      })
+    }
   }
 
   return (
@@ -234,9 +258,21 @@ export default function ProductVisualizer({ productImage, productName }: Product
         <h2 className="text-2xl font-bold">Product Visualizer</h2>
         <Button onClick={handleRegenerateAll} variant="outline" className="flex items-center gap-2">
           <RefreshCw className="h-4 w-4" />
-          Regenerate All
+          {useFallback ? "Try Advanced Mode" : "Regenerate All"}
         </Button>
       </div>
+
+      {useFallback && (
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start gap-2">
+          <Info className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-yellow-700">
+              Using simplified visualization mode due to image loading issues. For a custom visualization with your
+              product, please contact our team or try a different product image.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Custom Tabs Implementation */}
       <div className="w-full">
@@ -269,6 +305,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
                     size="sm"
                     onClick={() => handleAreaChange(mockup.id, area.name)}
                     className="capitalize"
+                    disabled={useFallback}
                   >
                     {area.name}
                   </Button>
@@ -276,11 +313,22 @@ export default function ProductVisualizer({ productImage, productName }: Product
               </div>
 
               <div className="relative rounded-lg overflow-hidden bg-white border">
-                {loading[mockup.id] ? (
+                {loading[mockup.id] && !useFallback ? (
                   <div className="flex items-center justify-center h-[400px]">
                     <Loader2 className="h-8 w-8 animate-spin text-[#194a95]" />
                   </div>
-                ) : visualizations[mockup.id] ? (
+                ) : useFallback || !visualizations[mockup.id] ? (
+                  // Fallback mode - just show the mockup
+                  <div className="relative aspect-[4/3] w-full">
+                    <Image
+                      src={mockup.src || "/placeholder.svg"}
+                      alt={`${productName} in ${mockup.name}`}
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                ) : (
+                  // Advanced mode with visualization
                   <div className="relative aspect-[4/3] w-full">
                     <Image
                       src={visualizations[mockup.id] || "/placeholder.svg"}
@@ -289,21 +337,13 @@ export default function ProductVisualizer({ productImage, productName }: Product
                       className="object-contain"
                     />
                   </div>
-                ) : (
-                  <div className="flex items-center justify-center h-[400px] text-center p-4">
-                    <div>
-                      <p className="text-red-500 font-medium mb-2">Failed to generate visualization</p>
-                      {error && <p className="text-sm text-gray-600">{error}</p>}
-                      <p className="text-sm text-gray-600 mt-2">Try refreshing or using a different product image</p>
-                    </div>
-                  </div>
                 )}
               </div>
 
               <div className="mt-4 flex justify-end">
                 <Button
                   onClick={() => handleDownload(mockup.id)}
-                  disabled={!visualizations[mockup.id] || loading[mockup.id]}
+                  disabled={loading[mockup.id] && !useFallback}
                   className="bg-[#194a95] hover:bg-[#0f3a7a]"
                 >
                   <Download className="mr-2 h-4 w-4" />

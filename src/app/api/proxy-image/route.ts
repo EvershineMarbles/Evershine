@@ -1,7 +1,8 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 
-export async function GET(request: NextRequest) {
-  const url = request.nextUrl.searchParams.get("url")
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const url = searchParams.get("url")
 
   if (!url) {
     return new NextResponse("Missing URL parameter", { status: 400 })
@@ -9,6 +10,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const response = await fetch(url)
+    
+    if (!response.ok) {
+      return new NextResponse(`Failed to fetch image: ${response.statusText}`, { 
+        status: response.status 
+      })
+    }
+    
     const blob = await response.blob()
 
     // Return the image with appropriate headers
