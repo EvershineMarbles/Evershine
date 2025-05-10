@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import { Download, Loader2, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface ProductVisualizerProps {
   productImage: string
@@ -68,6 +67,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const [visualizations, setVisualizations] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [selectedArea, setSelectedArea] = useState<Record<string, string>>({})
+  const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   // Initialize loading and selected areas
@@ -113,12 +113,12 @@ export default function ProductVisualizer({ productImage, productName }: Product
       canvas.width = 1000
       canvas.height = 1000
 
-      // Load the mockup image
-      const mockupImage = new Image()
+      // Load the mockup image - using document.createElement instead of new Image()
+      const mockupImage = document.createElement("img")
       mockupImage.crossOrigin = "anonymous"
 
-      // Load the product texture
-      const textureImage = new Image()
+      // Load the product texture - using document.createElement instead of new Image()
+      const textureImage = document.createElement("img")
       textureImage.crossOrigin = "anonymous"
 
       // Create a promise to handle image loading
@@ -215,17 +215,28 @@ export default function ProductVisualizer({ productImage, productName }: Product
         </Button>
       </div>
 
-      <Tabs defaultValue={MOCKUPS[0].id} className="w-full">
-        <TabsList className="grid grid-cols-2 w-full mb-6">
+      {/* Custom Tabs Implementation */}
+      <div className="w-full">
+        {/* Tab Headers */}
+        <div className="flex border-b mb-6">
           {MOCKUPS.map((mockup) => (
-            <TabsTrigger key={mockup.id} value={mockup.id}>
+            <button
+              key={mockup.id}
+              onClick={() => setActiveTab(mockup.id)}
+              className={`px-4 py-2 font-medium text-sm ${
+                activeTab === mockup.id
+                  ? "border-b-2 border-[#194a95] text-[#194a95]"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
               {mockup.name}
-            </TabsTrigger>
+            </button>
           ))}
-        </TabsList>
+        </div>
 
+        {/* Tab Content */}
         {MOCKUPS.map((mockup) => (
-          <TabsContent key={mockup.id} value={mockup.id} className="mt-0">
+          <div key={mockup.id} className={activeTab === mockup.id ? "block" : "hidden"}>
             <div className="border rounded-lg p-4 bg-gray-50">
               <div className="flex flex-wrap gap-3 mb-4">
                 {mockup.targetAreas.map((area) => (
@@ -273,9 +284,9 @@ export default function ProductVisualizer({ productImage, productName }: Product
                 </Button>
               </div>
             </div>
-          </TabsContent>
+          </div>
         ))}
-      </Tabs>
+      </div>
     </div>
   )
 }
