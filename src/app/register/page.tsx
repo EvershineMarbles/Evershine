@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -12,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { registerFeeder } from "@/lib/feeder-auth"
 
 export default function FeederRegister() {
   const router = useRouter()
@@ -76,28 +75,6 @@ export default function FeederRegister() {
 
     setErrors(newErrors)
     return valid
-  }
-
-  const registerFeeder = async (name: string, email: string, password: string) => {
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/feeder/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, email, password }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to register")
-      }
-
-      return { success: true, data: data.data }
-    } catch (error: any) {
-      return { success: false, message: error.message }
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

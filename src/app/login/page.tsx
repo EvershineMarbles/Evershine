@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -12,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { loginFeeder } from "@/lib/feeder-auth"
 
 export default function FeederLogin() {
   const router = useRouter()
@@ -61,39 +60,6 @@ export default function FeederLogin() {
     return valid
   }
 
-  const loginFeeder = async (email: string, password: string) => {
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/feeder/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to login")
-      }
-
-      // Store tokens in localStorage
-      localStorage.setItem("feederAccessToken", data.data.accessToken)
-      localStorage.setItem("feederRefreshToken", data.data.refreshToken)
-      
-      // Store feeder info
-      localStorage.setItem("feederInfo", JSON.stringify({
-        feederId: data.data.feeder.feederId,
-        name: data.data.feeder.name,
-        email: data.data.feeder.email,
-      }))
-
-      return { success: true, data: data.data }
-    } catch (error: any) {
-      return { success: false, message: error.message }
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setApiError("")
@@ -134,7 +100,7 @@ export default function FeederLogin() {
     <main className="flex min-h-screen flex-col items-center justify-center p-6 md:p-12 bg-gray-50">
       <div className="w-full max-w-md">
         <div className="w-full flex flex-col items-center relative mb-8">
-          <Link href="https://evershine-two.vercel.app/" className="absolute left-0 top-0 inline-flex items-center text-dark hover:underline">
+          <Link href="/" className="absolute left-0 top-0 inline-flex items-center text-dark hover:underline">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Home
           </Link>
