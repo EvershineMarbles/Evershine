@@ -29,22 +29,107 @@ const MOCKUPS = [
       { id: "wall", name: "Wall" },
     ],
   },
+  {
+    id: "bathroom-marble",
+    name: "Bathroom Marble",
+    src: "/assets/mockups/bathroom-marble-mockup.png",
+    areas: [
+      { id: "floor", name: "Floor" },
+      { id: "wall", name: "Wall" },
+    ],
+  },
 ]
 
-// Simple overlay positions for each mockup and area
-const OVERLAY_POSITIONS = {
+// Define overlay positions and styles for each mockup and area
+const OVERLAY_STYLES = {
   bathroom: {
-    floor: { top: "60%", left: "0", width: "100%", height: "40%", opacity: 0.7 },
-    wall: { top: "0", left: "0", width: "100%", height: "60%", opacity: 0.5 },
+    wall: {
+      position: "absolute",
+      top: "0%",
+      left: "0%",
+      width: "100%",
+      height: "60%",
+      backgroundImage: "",
+      backgroundSize: "cover",
+      backgroundRepeat: "no-repeat",
+      opacity: 0.85,
+      mixBlendMode: "multiply",
+      zIndex: 10,
+    },
+    floor: {
+      position: "absolute",
+      top: "60%",
+      left: "0%",
+      width: "100%",
+      height: "40%",
+      backgroundImage: "",
+      backgroundSize: "cover",
+      backgroundRepeat: "no-repeat",
+      opacity: 0.7,
+      mixBlendMode: "overlay",
+      zIndex: 10,
+    },
   },
   "living-room": {
-    floor: { top: "70%", left: "0", width: "100%", height: "30%", opacity: 0.7 },
-    wall: { top: "0", left: "0", width: "100%", height: "70%", opacity: 0.3 },
+    wall: {
+      position: "absolute",
+      top: "0%",
+      left: "0%",
+      width: "100%",
+      height: "70%",
+      backgroundImage: "",
+      backgroundSize: "cover",
+      backgroundRepeat: "no-repeat",
+      opacity: 0.3,
+      mixBlendMode: "overlay",
+      zIndex: 10,
+    },
+    floor: {
+      position: "absolute",
+      top: "70%",
+      left: "0%",
+      width: "100%",
+      height: "30%",
+      backgroundImage: "",
+      backgroundSize: "cover",
+      backgroundRepeat: "no-repeat",
+      opacity: 0.8,
+      mixBlendMode: "overlay",
+      zIndex: 10,
+    },
+  },
+  "bathroom-marble": {
+    wall: {
+      position: "absolute",
+      top: "0%",
+      left: "0%",
+      width: "100%",
+      height: "65%",
+      backgroundImage: "",
+      backgroundSize: "cover",
+      backgroundRepeat: "no-repeat",
+      opacity: 0.9,
+      mixBlendMode: "multiply",
+      zIndex: 10,
+    },
+    floor: {
+      position: "absolute",
+      top: "65%",
+      left: "0%",
+      width: "100%",
+      height: "35%",
+      backgroundImage: "",
+      backgroundSize: "cover",
+      backgroundRepeat: "no-repeat",
+      opacity: 0.8,
+      mixBlendMode: "overlay",
+      zIndex: 10,
+    },
   },
 }
 
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
-  const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
+  const [activeTab, setActiveTab] = useState<string>("bathroom")
   const [selectedArea, setSelectedArea] = useState<Record<string, string>>({})
   const [imageLoaded, setImageLoaded] = useState(false)
 
@@ -62,17 +147,32 @@ export default function ProductVisualizer({ productImage, productName }: Product
     setSelectedArea((prev) => ({ ...prev, [mockupId]: areaId }))
   }
 
+  // Get style for current overlay
+  const getOverlayStyle = (mockupId: string, areaId: string) => {
+    if (!OVERLAY_STYLES[mockupId as keyof typeof OVERLAY_STYLES]) return {}
+
+    const baseStyle =
+      OVERLAY_STYLES[mockupId as keyof typeof OVERLAY_STYLES][
+        areaId as keyof (typeof OVERLAY_STYLES)[keyof typeof OVERLAY_STYLES]
+      ]
+
+    return {
+      ...baseStyle,
+      backgroundImage: `url(${productImage})`,
+    }
+  }
+
   return (
     <div className="w-full">
       <h2 className="text-2xl font-bold mb-6">Product Visualizer</h2>
 
       {/* Tab Headers */}
-      <div className="flex border-b mb-6">
+      <div className="flex border-b mb-6 overflow-x-auto">
         {MOCKUPS.map((mockup) => (
           <button
             key={mockup.id}
             onClick={() => setActiveTab(mockup.id)}
-            className={`px-4 py-2 font-medium text-sm ${
+            className={`px-4 py-2 font-medium text-sm whitespace-nowrap ${
               activeTab === mockup.id
                 ? "border-b-2 border-[#194a95] text-[#194a95]"
                 : "text-gray-500 hover:text-gray-700"
@@ -112,44 +212,19 @@ export default function ProductVisualizer({ productImage, productName }: Product
                   fill
                   className="object-cover"
                   onLoad={() => setImageLoaded(true)}
+                  priority
                 />
 
                 {/* Product Texture Overlay */}
                 {imageLoaded && selectedArea[mockup.id] && (
-                  <div
-                    className="absolute z-10"
-                    style={{
-                      top: OVERLAY_POSITIONS[mockup.id as keyof typeof OVERLAY_POSITIONS][
-                        selectedArea[mockup.id] as keyof (typeof OVERLAY_POSITIONS)[keyof typeof OVERLAY_POSITIONS]
-                      ].top,
-                      left: OVERLAY_POSITIONS[mockup.id as keyof typeof OVERLAY_POSITIONS][
-                        selectedArea[mockup.id] as keyof (typeof OVERLAY_POSITIONS)[keyof typeof OVERLAY_POSITIONS]
-                      ].left,
-                      width:
-                        OVERLAY_POSITIONS[mockup.id as keyof typeof OVERLAY_POSITIONS][
-                          selectedArea[mockup.id] as keyof (typeof OVERLAY_POSITIONS)[keyof typeof OVERLAY_POSITIONS]
-                        ].width,
-                      height:
-                        OVERLAY_POSITIONS[mockup.id as keyof typeof OVERLAY_POSITIONS][
-                          selectedArea[mockup.id] as keyof (typeof OVERLAY_POSITIONS)[keyof typeof OVERLAY_POSITIONS]
-                        ].height,
-                      opacity:
-                        OVERLAY_POSITIONS[mockup.id as keyof typeof OVERLAY_POSITIONS][
-                          selectedArea[mockup.id] as keyof (typeof OVERLAY_POSITIONS)[keyof typeof OVERLAY_POSITIONS]
-                        ].opacity,
-                      backgroundImage: `url(${productImage})`,
-                      backgroundRepeat: "repeat",
-                      backgroundSize: "200px 200px",
-                      mixBlendMode: "multiply",
-                    }}
-                  />
+                  <div style={getOverlayStyle(mockup.id, selectedArea[mockup.id])} />
                 )}
               </div>
             </div>
 
             {/* Simple Instruction */}
             <p className="text-sm text-gray-500 mt-4 text-center">
-              This is a simple visualization of how {productName} might look in this space.
+              This is a visualization of how {productName} might look in this space.
             </p>
           </div>
         </div>
