@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
 interface ProductVisualizerProps {
@@ -13,34 +14,35 @@ const MOCKUPS = [
   {
     id: "bathroom",
     name: "Bathroom",
-    src: "/assets/mockups/bathroom-mockup.png",
+    src: "/assets/mockups/bathroom.png",
   },
   {
     id: "bedroom-green",
     name: "Bedroom (Green)",
-    src: "/assets/mockups/bedroom-green-mockup.png",
+    src: "/assets/mockups/bedroom-green.png",
   },
   {
     id: "living-room",
     name: "Living Room",
-    src: "/assets/mockups/living-room-mockup.png",
+    src: "/assets/mockups/living-room.png",
   },
   {
     id: "luxury-living",
     name: "Luxury Living",
-    src: "/assets/mockups/luxury-living-mockup.png",
+    src: "/assets/mockups/luxury-living.jpeg",
   },
   {
     id: "modern-bedroom",
     name: "Modern Bedroom",
-    src: "/assets/mockups/modern-bedroom-mockup.png",
+    src: "/assets/mockups/modern-bedroom.png",
   },
   {
     id: "minimalist",
     name: "Minimalist",
-    src: "/assets/mockups/minimalist-mockup.png",
+    src: "/assets/mockups/minimalist.png",
   },
 ]
+
 
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
