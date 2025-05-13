@@ -43,32 +43,26 @@ export default function ProductVisualizer({ productImage, productName }: Product
       {/* Visualization Area */}
       <div className="border rounded-lg overflow-hidden bg-white">
         <div className="relative aspect-[4/3] w-full">
-          {/* Base Bathroom Mockup Image */}
+          {/* Product Texture Background - This will be visible through transparent areas of the mockup */}
+          {imageLoaded && !imageError && (
+            <div
+              className="absolute inset-0 z-0"
+              style={{
+                backgroundImage: `url(${productImage})`,
+                backgroundRepeat: "repeat",
+                backgroundSize: "300px 300px",
+              }}
+            />
+          )}
+
+          {/* Base Bathroom Mockup Image - With transparent areas where product should show */}
           <Image
             src="/assets/mockups/bathroom-mockup.png"
             alt="Bathroom mockup"
             fill
-            className="object-cover"
+            className="object-cover z-10 relative"
             priority
           />
-
-          {/* Product Texture Overlay - Applied to the entire white wall area */}
-          {imageLoaded && !imageError && (
-            <div
-              className="absolute z-10"
-              style={{
-                top: "0",
-                left: "0",
-                width: "100%",
-                height: "50%", // Cover the top half (white wall area)
-                backgroundImage: `url(${productImage})`,
-                backgroundRepeat: "repeat",
-                backgroundSize: "300px 300px",
-                mixBlendMode: "multiply",
-                opacity: 0.9,
-              }}
-            />
-          )}
         </div>
       </div>
 
