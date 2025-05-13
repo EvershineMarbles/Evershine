@@ -39,51 +39,53 @@ export function FeederSidebar() {
       icon: Edit,
     },
   ]
- 
-    return (
-      <div className="fixed top-0 left-0 h-screen w-16 flex flex-col bg-black text-white shadow-lg">
-        {/* No blue strip in sidebar - it will be in the layout */}
-        <div className="sidebar-icon mt-4">
-          <span className="text-xl font-bold">F</span>
-        </div>
-  
-        <hr className="sidebar-hr my-2" />
-  
-        <TooltipProvider>
-          {routes.map((route) => (
-            <Tooltip key={route.href}>
-              <TooltipTrigger asChild>
-                <Link
-                  href={route.href}
-                  className={cn(
-                    "sidebar-icon",
-                    pathname === route.href || pathname.startsWith(route.href + "/") ? "bg-[#194a95]" : "",
-                  )}
-                >
-                  <route.icon size={24} />
-                  <span className="sidebar-tooltip">{route.name}</span>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">{route.name}</TooltipContent>
-            </Tooltip>
-          ))}
-        </TooltipProvider>
-  
-        <div className="mt-auto mb-4">
-          <hr className="sidebar-hr my-2" />
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button onClick={handleLogout} className="sidebar-icon">
-                  <LogOut size={24} />
-                  <span className="sidebar-tooltip">Logout</span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Logout</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+
+  return (
+    <div className="fixed top-0 left-0 h-screen w-16 flex flex-col bg-black text-white shadow-lg z-14">
+      {/* Black strip is now the container itself */}
+      {/* Blue strip below the black strip */}
+      <div className="w-full h-6 bg-[#194a95] mt-0"></div>
+
+      <div className="sidebar-icon mt-4">
+        <span className="text-xl font-bold">F</span>
       </div>
-    )
-  }
-  
+
+      <hr className="sidebar-hr my-2" />
+
+      <TooltipProvider>
+        {routes.map((route) => (
+          <Tooltip key={route.href}>
+            <TooltipTrigger asChild>
+              <Link
+                href={route.href}
+                className={cn(
+                  "sidebar-icon",
+                  pathname === route.href || pathname.startsWith(route.href + "/") ? "bg-[#194a95]" : "",
+                )}
+              >
+                <route.icon size={24} />
+                <span className="sidebar-tooltip">{route.name}</span>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">{route.name}</TooltipContent>
+          </Tooltip>
+        ))}
+      </TooltipProvider>
+
+      <div className="mt-auto mb-4">
+        <hr className="sidebar-hr my-2" />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={handleLogout} className="sidebar-icon">
+                <LogOut size={24} />
+                <span className="sidebar-tooltip">Logout</span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Logout</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    </div>
+  )
+}
