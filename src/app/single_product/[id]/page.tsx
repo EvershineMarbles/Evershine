@@ -30,9 +30,9 @@ import {
 import { Badge } from "@/components/ui/badge"
 import QRCodeGenerator from "@/components/QRCodeGenerator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import ProductVisualizer from "@/components/ProductVisualizer"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import FeederLayout from "@/components/FeederLayout"
+import SimpleMockupVisualizer from "@/components/SimpleMockupVisualizer"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -655,10 +655,10 @@ function ProductDetail() {
             </div>
           </div>
 
-          {/* Product Visualizer Section */}
+          {/* Product Visualizer Section - Using SimpleMockupVisualizer instead of ProductVisualizer */}
           {showVisualizer && product.image.length > 0 && (
             <div className="max-w-6xl mx-auto mt-12 border-t pt-8">
-              <ProductVisualizer productImage={product.image[0]} productName={product.name} />
+              <SimpleMockupVisualizer productImage={product.image[0]} productName={product.name} />
             </div>
           )}
 

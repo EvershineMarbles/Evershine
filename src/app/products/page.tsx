@@ -141,7 +141,7 @@ function Products() {
               key={product._id}
               className="group relative bg-white rounded-2xl overflow-hidden border border-gray-200/80 hover:border-gray-300/80 transition-colors"
             >
-              <Link href={`/product/${product.postId}`} className="block">
+              <Link href={`/single_product/${product.postId}`} className="block">
                 <div className="p-3">
                   <div
                     className="relative w-full overflow-hidden rounded-xl bg-gray-50
