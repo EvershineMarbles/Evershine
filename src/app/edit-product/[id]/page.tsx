@@ -4,7 +4,9 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import axios from "axios"
 import ProductForm from "@/app/components/ProductForm"
-import { Loader2 } from "lucide-react"
+import { Loader2, LogOut, Home } from "lucide-react"
+import ProtectedRoute from "@/components/ProtectedRoute"
+import { logoutFeeder } from "@/lib/feeder-auth"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -21,18 +23,30 @@ interface Product {
   status?: "draft" | "pending" | "approved"
 }
 
-export default function EditProduct() {
+function EditProduct() {
   const params = useParams()
   const router = useRouter()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [feederName, setFeederName] = useState<string>("")
 
   useEffect(() => {
+    // Get feeder name from localStorage
+    if (typeof window !== "undefined") {
+      const name = localStorage.getItem("feederName")
+      setFeederName(name || "Feeder")
+    }
+
     if (params.id) {
       fetchProduct()
     }
   }, [params.id])
+
+  const handleLogout = () => {
+    logoutFeeder()
+    router.push("/login")
+  }
 
   const fetchProduct = async () => {
     try {
@@ -99,8 +113,38 @@ export default function EditProduct() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Dashboard Header Strip */}
+      <div className="w-full bg-[rgb(25,74,149)] py-4 px-6 shadow-md">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <h1 className="text-white text-xl font-medium">Evershine Dashboard</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-white">Welcome, {feederName}</span>
+            <button
+              onClick={() => router.push("/products")}
+              className="flex items-center text-white hover:text-gray-200 transition-colors mr-4"
+            >
+              <Home className="h-5 w-5 mr-1" />
+              <span>Dashboard</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center text-white hover:text-gray-200 transition-colors"
+            >
+              <LogOut className="h-5 w-5 mr-1" />
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      </div>
       <ProductForm mode="edit" initialData={product} />
     </div>
   )
 }
 
+export default function ProtectedEditProductPage() {
+  return (
+    <ProtectedRoute>
+      <EditProduct />
+    </ProtectedRoute>
+  )
+}

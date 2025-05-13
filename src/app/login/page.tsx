@@ -97,7 +97,7 @@ export default function FeederLoginPage() {
 
         // Redirect after 2 seconds
         setTimeout(() => {
-          router.push("/feeder/dashboard")
+          router.push("/products")
         }, 2000)
       } else {
         throw new Error(response.message || "Failed to login")

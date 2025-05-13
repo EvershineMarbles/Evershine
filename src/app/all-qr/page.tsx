@@ -5,12 +5,14 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Download, Loader2, Search, Home, Grid, List, Check } from "lucide-react"
+import { ArrowLeft, Download, Loader2, Search, Home, Grid, List, Check, LogOut } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { toast } from "sonner"
 import QRCode from "qrcode"
+import ProtectedRoute from "@/components/ProtectedRoute"
+import { logoutFeeder } from "@/lib/feeder-auth"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -28,19 +30,30 @@ interface Product {
   finishes?: string
 }
 
-export default function AllQR() {
+function AllQR() {
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  // const [previewProduct, setPreviewProduct] = useState<Product | null>(null)
   const [priceValues, setPriceValues] = useState<Record<string, string>>({})
   const [updatingPrice, setUpdatingPrice] = useState<Record<string, boolean>>({})
   const [generatingQR, setGeneratingQR] = useState<Record<string, boolean>>({})
+  const [feederName, setFeederName] = useState<string>("")
 
   useEffect(() => {
+    // Get feeder name from localStorage
+    if (typeof window !== "undefined") {
+      const name = localStorage.getItem("feederName")
+      setFeederName(name || "Feeder")
+    }
+
     fetchProducts()
   }, [])
+
+  const handleLogout = () => {
+    logoutFeeder()
+    router.push("/login")
+  }
 
   const fetchProducts = async () => {
     try {
@@ -67,14 +80,6 @@ export default function AllQR() {
   const filteredProducts = products.filter((product) => {
     return product.name.toLowerCase().includes(searchQuery.toLowerCase())
   })
-
-  // const handlePreviewQR = (product: Product) => {
-  //   setPreviewProduct(product)
-  // }
-
-  // const closePreview = () => {
-  //   setPreviewProduct(null)
-  // }
 
   const handlePriceChange = (productId: string, value: string) => {
     setPriceValues((prev) => ({
@@ -260,13 +265,23 @@ export default function AllQR() {
       <div className="w-full bg-[rgb(25,74,149)] py-4 px-6 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <h1 className="text-white text-xl font-medium">Evershine Dashboard</h1>
-          <button
-            onClick={() => router.push("https://evershine-two.vercel.app/")}
-            className="flex items-center text-white hover:text-gray-200 transition-colors"
-          >
-            <Home className="h-5 w-5" />
-            <span className="ml-2">Home</span>
-          </button>
+          <div className="flex items-center gap-4">
+            <span className="text-white">Welcome, {feederName}</span>
+            <button
+              onClick={() => router.push("/products")}
+              className="flex items-center text-white hover:text-gray-200 transition-colors mr-4"
+            >
+              <Home className="h-5 w-5 mr-1" />
+              <span>Dashboard</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center text-white hover:text-gray-200 transition-colors"
+            >
+              <LogOut className="h-5 w-5 mr-1" />
+              <span>Logout</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -275,10 +290,11 @@ export default function AllQR() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
             <button
-              onClick={() => router.push("https://evershine-two.vercel.app/")}
+              onClick={() => router.push("/products")}
               className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
             >
               <ArrowLeft className="h-6 w-6" />
+              <span className="ml-2">Back to Products</span>
             </button>
           </div>
         </div>
@@ -327,11 +343,10 @@ export default function AllQR() {
             Add New Product
           </button>
         </div>
-          {/* Products Count */}
-          <p className="text-gray-600 mb-6">
+        {/* Products Count */}
+        <p className="text-gray-600 mb-6">
           Showing {filteredProducts.length} of {products.length} products
         </p>
-
 
         {/* Products Table */}
         <div className="overflow-x-auto">
@@ -441,38 +456,14 @@ export default function AllQR() {
           </div>
         )}
       </div>
-
-      {/* QR Code Preview Modal */}
-      {/* {previewProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">QR Code Preview</h3>
-              <button onClick={closePreview} className="text-gray-400 hover:text-gray-500">
-                <span className="sr-only">Close</span>
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex flex-col items-center">
-              <QRCodeGenerator
-                productId={previewProduct.postId}
-                productName={previewProduct.name}
-                category={previewProduct.category}
-                thickness={previewProduct.thickness}
-                size={previewProduct.size}
-                sizeUnit={previewProduct.sizeUnit}
-                finishes={previewProduct.finishes}
-              />
-              <div className="text-center mt-4">
-                <h4 className="font-medium">{previewProduct.name}</h4>
-                <p className="text-sm text-gray-500">₹{previewProduct.price}/per sqft</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )} */}
     </div>
+  )
+}
+
+export default function ProtectedAllQRPage() {
+  return (
+    <ProtectedRoute>
+      <AllQR />
+    </ProtectedRoute>
   )
 }

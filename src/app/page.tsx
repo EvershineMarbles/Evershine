@@ -26,7 +26,7 @@ export default function LandingPage() {
           </button>
 
           <button
-            onClick={() => router.push("/products")}
+           onClick={() => router.push("/login")}
             className="w-full py-5 bg-[rgb(25,74,149)] text-white text-lg font-medium rounded-[10px] hover:bg-[rgb(25,74,149)]/90 transition-all shadow-lg hover:shadow-xl"
           >
             Feeder

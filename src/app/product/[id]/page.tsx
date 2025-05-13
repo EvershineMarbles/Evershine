@@ -13,6 +13,8 @@ import {
   ChevronUp,
   Calculator,
   Download,
+  LogOut,
+  Home,
 } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -31,6 +33,8 @@ import { Badge } from "@/components/ui/badge"
 import QRCodeGenerator from "@/components/QRCodeGenerator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import ProductVisualizer from "@/components/ProductVisualizer"
+import ProtectedRoute from "@/components/ProtectedRoute"
+import { logoutFeeder } from "@/lib/feeder-auth"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -116,7 +120,7 @@ const calculateQuantityFormula = (size: string, sizeUnit: string, numberOfPieces
   }
 }
 
-export default function ProductDetail() {
+function ProductDetail() {
   const params = useParams()
   const router = useRouter()
   const [product, setProduct] = useState<Product | null>(null)
@@ -130,9 +134,16 @@ export default function ProductDetail() {
   const [showFullDescription, setShowFullDescription] = useState(false)
   const [quantityFormula, setQuantityFormula] = useState<string | null>(null)
   const [showVisualizer, setShowVisualizer] = useState(false)
+  const [feederName, setFeederName] = useState<string>("")
 
   // Update the useEffect to use this enhanced debugging
   useEffect(() => {
+    // Get feeder name from localStorage
+    if (typeof window !== "undefined") {
+      const name = localStorage.getItem("feederName")
+      setFeederName(name || "Feeder")
+    }
+
     const fetchProduct = async () => {
       try {
         setLoading(true)
@@ -196,6 +207,11 @@ export default function ProductDetail() {
 
     fetchProduct()
   }, [params.id])
+
+  const handleLogout = () => {
+    logoutFeeder()
+    router.push("/login")
+  }
 
   const handleDelete = async () => {
     try {
@@ -339,9 +355,9 @@ export default function ProductDetail() {
         <div className="w-full max-w-md p-6 text-center space-y-2">
           <h2 className="text-xl font-medium text-gray-900">{error || "No data found"}</h2>
           <p className="text-sm text-gray-500">Product ID: {params.id}</p>
-          <Button onClick={() => router.push("/")} className="mt-4 bg-[#194a95]">
+          <Button onClick={() => router.push("/products")} className="mt-4 bg-[#194a95]">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
+            Back to Products
           </Button>
         </div>
       </div>
@@ -378,306 +394,340 @@ export default function ProductDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-6">
-      {/* Back Button */}
-      <button
-        onClick={() => router.back()}
-        className="mb-6 hover:bg-gray-100 p-2 rounded-full transition-colors"
-        aria-label="Go back"
-      >
-        <ArrowLeft className="h-6 w-6" />
-      </button>
-
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row md:gap-12">
-          {/* Images Section */}
-          <div className="w-full md:w-1/2 md:order-2 mb-8 md:mb-0">
-            {/* Main Image with Navigation Arrows */}
-            <div className="relative rounded-2xl overflow-hidden bg-gray-100 mb-4">
-              <div className="aspect-[4/3] relative">
-                <Image
-                  src={
-                    imageLoadError[currentImageIndex]
-                      ? "/placeholder.svg"
-                      : product.image[currentImageIndex] || "/placeholder.svg"
-                  }
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                  onError={() => handleImageError(currentImageIndex)}
-                  priority
-                />
-
-                {/* Navigation Arrows */}
-                {product.image.length > 1 && (
-                  <>
-                    <button
-                      onClick={previousImage}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all"
-                      aria-label="Previous image"
-                    >
-                      <ChevronLeft className="h-6 w-6 text-gray-800" />
-                    </button>
-                    <button
-                      onClick={nextImage}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all"
-                      aria-label="Next image"
-                    >
-                      <ChevronRight className="h-6 w-6 text-gray-800" />
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Thumbnails */}
-            {product.image.length > 1 && (
-              <div className="grid grid-cols-4 gap-4">
-                {product.image.map((img, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleThumbnailClick(index)}
-                    className={`relative rounded-xl overflow-hidden aspect-square ${
-                      selectedThumbnail === index ? "ring-2 ring-[#194a95]" : ""
-                    }`}
-                  >
-                    <Image
-                      src={imageLoadError[index] ? "/placeholder.svg" : img || "/placeholder.svg"}
-                      alt={`${product.name} thumbnail ${index + 1}`}
-                      fill
-                      className="object-cover"
-                      onError={() => handleImageError(index)}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
+    <div className="min-h-screen bg-white">
+      {/* Dashboard Header Strip */}
+      <div className="w-full bg-[rgb(25,74,149)] py-4 px-6 shadow-md">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <h1 className="text-white text-xl font-medium">Evershine Dashboard</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-white">Welcome, {feederName}</span>
+            <button
+              onClick={() => router.push("/products")}
+              className="flex items-center text-white hover:text-gray-200 transition-colors mr-4"
+            >
+              <Home className="h-5 w-5 mr-1" />
+              <span>Dashboard</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center text-white hover:text-gray-200 transition-colors"
+            >
+              <LogOut className="h-5 w-5 mr-1" />
+              <span>Logout</span>
+            </button>
           </div>
+        </div>
+      </div>
 
-          {/* Product Details */}
-          <div className="w-full md:w-1/2 md:order-1 space-y-6">
-            {/* Product Name */}
-            <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-500">Product Name</p>
-              <h1 className="text-3xl font-bold mt-1">{product.name}</h1>
-            </div>
+      <div className="p-6">
+        {/* Back Button */}
+        <button
+          onClick={() => router.back()}
+          className="mb-6 hover:bg-gray-100 p-2 rounded-full transition-colors"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="h-6 w-6" />
+        </button>
 
-            {/* Price */}
-            <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-500">Price (per sqft)</p>
-              <p className="text-xl font-bold mt-1">₹{product.price}/per sqft</p>
-            </div>
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row md:gap-12">
+            {/* Images Section */}
+            <div className="w-full md:w-1/2 md:order-2 mb-8 md:mb-0">
+              {/* Main Image with Navigation Arrows */}
+              <div className="relative rounded-2xl overflow-hidden bg-gray-100 mb-4">
+                <div className="aspect-[4/3] relative">
+                  <Image
+                    src={
+                      imageLoadError[currentImageIndex]
+                        ? "/placeholder.svg"
+                        : product.image[currentImageIndex] || "/placeholder.svg"
+                    }
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                    onError={() => handleImageError(currentImageIndex)}
+                    priority
+                  />
 
-            {/* Product Category */}
-            <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-500">Product Category</p>
-              <p className="text-xl font-bold mt-1">{product.category}</p>
-            </div>
-
-            {/* Quantity Available */}
-            <div className="pb-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <p className="text-gray-500">Quantity Available (in sqft)</p>
-                {quantityFormula && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center text-gray-500 cursor-help">
-                          <Calculator className="h-4 w-4 mr-1" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-sm">{quantityFormula}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
-              <p className="text-xl font-bold mt-1">{product.quantityAvailable}</p>
-            </div>
-
-            {/* Size, No. of Pieces, and Thickness in 3 columns */}
-            <div className="grid grid-cols-3 gap-4 pb-4 border-b border-gray-200">
-              <div>
-                <p className="text-gray-500">Size</p>
-                <p className="text-lg font-bold mt-1">
-                  {product.size !== undefined && product.size !== null && product.size !== ""
-                    ? `${product.size} ${product.sizeUnit || "inches"}`
-                    : "-"}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-500">No. of Pieces</p>
-                <p className="text-lg font-bold mt-1">
-                  {product.numberOfPieces !== undefined && product.numberOfPieces !== null
-                    ? product.numberOfPieces
-                    : "-"}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-500">Thickness</p>
-                <p className="text-lg font-bold mt-1">
-                  {product.thickness !== undefined && product.thickness !== null && product.thickness !== ""
-                    ? product.thickness
-                    : "-"}
-                </p>
-              </div>
-            </div>
-
-            {/* Finishes */}
-            {product.finishes && (
-              <div className="pb-4 border-b border-gray-200">
-                <p className="text-gray-500">Finishes</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {typeof product.finishes === "string" ? (
-                    product.finishes.split(",").map((finish, index) => (
-                      <Badge
-                        key={index}
-                        className="bg-[#194a95] hover:bg-[#194a95] text-white px-3 py-1 text-sm capitalize"
+                  {/* Navigation Arrows */}
+                  {product.image.length > 1 && (
+                    <>
+                      <button
+                        onClick={previousImage}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all"
+                        aria-label="Previous image"
                       >
-                        {finish.trim()}
-                      </Badge>
-                    ))
-                  ) : (
-                    <p className="text-lg font-bold mt-1 capitalize">No finishes specified</p>
+                        <ChevronLeft className="h-6 w-6 text-gray-800" />
+                      </button>
+                      <button
+                        onClick={nextImage}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all"
+                        aria-label="Next image"
+                      >
+                        <ChevronRight className="h-6 w-6 text-gray-800" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
-            )}
 
-            {/* Application Areas */}
-            <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-500">Application Areas</p>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {applicationAreas.length > 0 ? (
-                  applicationAreas.map((area, index) => (
-                    <Badge key={index} className="bg-[#194a95] hover:bg-[#194a95] text-white px-3 py-1 text-sm">
-                      {area}
-                    </Badge>
-                  ))
-                ) : (
-                  <p className="text-gray-600">No application areas specified</p>
-                )}
-              </div>
+              {/* Thumbnails */}
+              {product.image.length > 1 && (
+                <div className="grid grid-cols-4 gap-4">
+                  {product.image.map((img, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleThumbnailClick(index)}
+                      className={`relative rounded-xl overflow-hidden aspect-square ${
+                        selectedThumbnail === index ? "ring-2 ring-[#194a95]" : ""
+                      }`}
+                    >
+                      <Image
+                        src={imageLoadError[index] ? "/placeholder.svg" : img || "/placeholder.svg"}
+                        alt={`${product.name} thumbnail ${index + 1}`}
+                        fill
+                        className="object-cover"
+                        onError={() => handleImageError(index)}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* About Product - Modified to show only 2 lines initially */}
-            <div className="pb-4 border-b border-gray-200">
-              <p className="text-gray-800">About Product</p>
-              <div className="mt-1">
-                <p
-                  className={`text-xl font-normal ${!showFullDescription ? "line-clamp-2" : ""} transition-all duration-200`}
-                >
-                  {product.description || "Product mainly used for countertop"}
-                </p>
-                {(product.description?.length || 0) > 80 && (
-                  <button
-                    onClick={() => setShowFullDescription(!showFullDescription)}
-                    className="text-[#194a95] hover:text-[#0f3a7a] mt-1 text-sm flex items-center"
+            {/* Product Details */}
+            <div className="w-full md:w-1/2 md:order-1 space-y-6">
+              {/* Product Name */}
+              <div className="pb-4 border-b border-gray-200">
+                <p className="text-gray-500">Product Name</p>
+                <h1 className="text-3xl font-bold mt-1">{product.name}</h1>
+              </div>
+
+              {/* Price */}
+              <div className="pb-4 border-b border-gray-200">
+                <p className="text-gray-500">Price (per sqft)</p>
+                <p className="text-xl font-bold mt-1">₹{product.price}/per sqft</p>
+              </div>
+
+              {/* Product Category */}
+              <div className="pb-4 border-b border-gray-200">
+                <p className="text-gray-500">Product Category</p>
+                <p className="text-xl font-bold mt-1">{product.category}</p>
+              </div>
+
+              {/* Quantity Available */}
+              <div className="pb-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <p className="text-gray-500">Quantity Available (in sqft)</p>
+                  {quantityFormula && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center text-gray-500 cursor-help">
+                            <Calculator className="h-4 w-4 mr-1" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-sm">{quantityFormula}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+                <p className="text-xl font-bold mt-1">{product.quantityAvailable}</p>
+              </div>
+
+              {/* Size, No. of Pieces, and Thickness in 3 columns */}
+              <div className="grid grid-cols-3 gap-4 pb-4 border-b border-gray-200">
+                <div>
+                  <p className="text-gray-500">Size</p>
+                  <p className="text-lg font-bold mt-1">
+                    {product.size !== undefined && product.size !== null && product.size !== ""
+                      ? `${product.size} ${product.sizeUnit || "inches"}`
+                      : "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500">No. of Pieces</p>
+                  <p className="text-lg font-bold mt-1">
+                    {product.numberOfPieces !== undefined && product.numberOfPieces !== null
+                      ? product.numberOfPieces
+                      : "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Thickness</p>
+                  <p className="text-lg font-bold mt-1">
+                    {product.thickness !== undefined && product.thickness !== null && product.thickness !== ""
+                      ? product.thickness
+                      : "-"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Finishes */}
+              {product.finishes && (
+                <div className="pb-4 border-b border-gray-200">
+                  <p className="text-gray-500">Finishes</p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {typeof product.finishes === "string" ? (
+                      product.finishes.split(",").map((finish, index) => (
+                        <Badge
+                          key={index}
+                          className="bg-[#194a95] hover:bg-[#194a95] text-white px-3 py-1 text-sm capitalize"
+                        >
+                          {finish.trim()}
+                        </Badge>
+                      ))
+                    ) : (
+                      <p className="text-lg font-bold mt-1 capitalize">No finishes specified</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Application Areas */}
+              <div className="pb-4 border-b border-gray-200">
+                <p className="text-gray-500">Application Areas</p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {applicationAreas.length > 0 ? (
+                    applicationAreas.map((area, index) => (
+                      <Badge key={index} className="bg-[#194a95] hover:bg-[#194a95] text-white px-3 py-1 text-sm">
+                        {area}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-gray-600">No application areas specified</p>
+                  )}
+                </div>
+              </div>
+
+              {/* About Product - Modified to show only 2 lines initially */}
+              <div className="pb-4 border-b border-gray-200">
+                <p className="text-gray-800">About Product</p>
+                <div className="mt-1">
+                  <p
+                    className={`text-xl font-normal ${!showFullDescription ? "line-clamp-2" : ""} transition-all duration-200`}
                   >
-                    {showFullDescription ? (
-                      <>
-                        Show less <ChevronUp className="ml-1 h-4 w-4" />
-                      </>
-                    ) : (
-                      <>
-                        View more <ChevronDown className="ml-1 h-4 w-4" />
-                      </>
-                    )}
-                  </button>
-                )}
+                    {product.description || "Product mainly used for countertop"}
+                  </p>
+                  {(product.description?.length || 0) > 80 && (
+                    <button
+                      onClick={() => setShowFullDescription(!showFullDescription)}
+                      className="text-[#194a95] hover:text-[#0f3a7a] mt-1 text-sm flex items-center"
+                    >
+                      {showFullDescription ? (
+                        <>
+                          Show less <ChevronUp className="ml-1 h-4 w-4" />
+                        </>
+                      ) : (
+                        <>
+                          View more <ChevronDown className="ml-1 h-4 w-4" />
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Visualizer Button */}
+              <div className="pb-4 border-b border-gray-200">
+                <Button
+                  onClick={() => setShowVisualizer(!showVisualizer)}
+                  className="w-full bg-[#194a95] hover:bg-[#0f3a7a]"
+                >
+                  {showVisualizer ? "Hide Visualizer" : "Show Product Visualizer"}
+                </Button>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-4">
+                <Button
+                  onClick={() => router.push(`/edit-product/${product.postId}`)}
+                  className="px-8 py-3 bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-md"
+                >
+                  Edit
+                </Button>
+
+                <Button
+                  onClick={downloadSimpleQRCode}
+                  className="px-8 py-3 bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-md"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download QR
+                </Button>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="px-8 py-3" disabled={isDeleting}>
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </>
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-white">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the product and remove all associated
+                        data.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="bg-gray-100 hover:bg-gray-200">Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
-
-            {/* Visualizer Button */}
-            <div className="pb-4 border-b border-gray-200">
-              <Button
-                onClick={() => setShowVisualizer(!showVisualizer)}
-                className="w-full bg-[#194a95] hover:bg-[#0f3a7a]"
-              >
-                {showVisualizer ? "Hide Visualizer" : "Show Product Visualizer"}
-              </Button>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-4">
-              <Button
-                onClick={() => router.push(`/edit-product/${product.postId}`)}
-                className="px-8 py-3 bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-md"
-              >
-                Edit
-              </Button>
-
-              <Button
-                onClick={downloadSimpleQRCode}
-                className="px-8 py-3 bg-[#194a95] hover:bg-[#0f3a7a] text-white rounded-md"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download QR
-              </Button>
-
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="px-8 py-3" disabled={isDeleting}>
-                    {isDeleting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </>
-                    )}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="bg-white">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the product and remove all associated
-                      data.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="bg-gray-100 hover:bg-gray-200">Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
           </div>
-        </div>
 
-        {/* Product Visualizer Section */}
-        {showVisualizer && product.image.length > 0 && (
-          <div className="max-w-6xl mx-auto mt-12 border-t pt-8">
-            <ProductVisualizer productImage={product.image[0]} productName={product.name} />
-          </div>
-        )}
-
-        {/* QR Code Section */}
-        <div className="max-w-6xl mx-auto mt-12 border-t pt-8">
-          <h2 className="text-2xl font-bold mb-6">Product QR Code</h2>
-          {product && (
-            <QRCodeGenerator
-              productId={product.postId}
-              productName={product.name}
-              category={product.category}
-              thickness={product.thickness}
-              size={product.size}
-            />
+          {/* Product Visualizer Section */}
+          {showVisualizer && product.image.length > 0 && (
+            <div className="max-w-6xl mx-auto mt-12 border-t pt-8">
+              <ProductVisualizer productImage={product.image[0]} productName={product.name} />
+            </div>
           )}
-        </div>
 
-        {/* Disclaimer */}
-        <div className="max-w-6xl mx-auto mt-8 pt-4 border-t">
-          <p className="text-gray-500 text-sm italic text-center">Disclaimer: Actual quantity can differ</p>
+          {/* QR Code Section */}
+          <div className="max-w-6xl mx-auto mt-12 border-t pt-8">
+            <h2 className="text-2xl font-bold mb-6">Product QR Code</h2>
+            {product && (
+              <QRCodeGenerator
+                productId={product.postId}
+                productName={product.name}
+                category={product.category}
+                thickness={product.thickness}
+                size={product.size}
+              />
+            )}
+          </div>
+
+          {/* Disclaimer */}
+          <div className="max-w-6xl mx-auto mt-8 pt-4 border-t">
+            <p className="text-gray-500 text-sm italic text-center">Disclaimer: Actual quantity can differ</p>
+          </div>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ProtectedProductDetailPage() {
+  return (
+    <ProtectedRoute>
+      <ProductDetail />
+    </ProtectedRoute>
   )
 }

@@ -6,8 +6,10 @@ import { useState, useEffect } from "react"
 import axios from "axios"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Search, Pencil, ArrowLeft, Loader2, Home, Grid, List } from "lucide-react"
+import { Search, Pencil, ArrowLeft, Loader2, Grid, List, LogOut } from "lucide-react"
 import Image from "next/image"
+import ProtectedRoute from "@/components/ProtectedRoute"
+import { logoutFeeder } from "@/lib/feeder-auth"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -20,15 +22,22 @@ interface Product {
   status?: "draft" | "pending" | "approved"
 }
 
-export default function Products() {
+function Products() {
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [imageError, setImageError] = useState<Record<string, boolean>>({})
   const [editLoading, setEditLoading] = useState<string | null>(null)
+  const [feederName, setFeederName] = useState<string>("")
 
   useEffect(() => {
+    // Get feeder name from localStorage
+    if (typeof window !== "undefined") {
+      const name = localStorage.getItem("feederName")
+      setFeederName(name || "Feeder")
+    }
+
     fetchProducts()
   }, [])
 
@@ -64,6 +73,11 @@ export default function Products() {
     }
   }
 
+  const handleLogout = () => {
+    logoutFeeder()
+    router.push("/login")
+  }
+
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesSearch
@@ -87,13 +101,16 @@ export default function Products() {
       <div className="w-full bg-[rgb(25,74,149)] py-4 px-6 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <h1 className="text-white text-xl font-medium">Evershine Dashboard</h1>
-          <button
-            onClick={() => router.push("https://evershine-two.vercel.app/")}
-            className="flex items-center text-white hover:text-gray-200 transition-colors"
-          >
-            <Home className="h-5 w-5" />
-            <span className="ml-2">Home</span>
-          </button>
+          <div className="flex items-center gap-4">
+            <span className="text-white">Welcome, {feederName}</span>
+            <button
+              onClick={handleLogout}
+              className="flex items-center text-white hover:text-gray-200 transition-colors"
+            >
+              <LogOut className="h-5 w-5 mr-1" />
+              <span>Logout</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -239,5 +256,13 @@ export default function Products() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function ProtectedProductsPage() {
+  return (
+    <ProtectedRoute>
+      <Products />
+    </ProtectedRoute>
   )
 }
