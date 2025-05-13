@@ -15,7 +15,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
   // Handle image loading errors
   useEffect(() => {
     // Create a test image to check if the product image can be loaded
-    const testImg = document.createElement("img")
+    const testImg = new Image()
     testImg.crossOrigin = "anonymous" // Add this to avoid CORS issues
     testImg.src = productImage
 
@@ -43,26 +43,32 @@ export default function ProductVisualizer({ productImage, productName }: Product
       {/* Visualization Area */}
       <div className="border rounded-lg overflow-hidden bg-white">
         <div className="relative aspect-[4/3] w-full">
-          {/* Product Texture Background - This will be visible through transparent areas of the mockup */}
+          {/* Base Bathroom Mockup Image */}
+          <Image
+            src="/assets/mockups/bathroom-mockup-2.jpeg"
+            alt="Bathroom mockup"
+            fill
+            className="object-cover"
+            priority
+          />
+
+          {/* Product Texture Overlay - Applied to the wall area behind the tub */}
           {imageLoaded && !imageError && (
             <div
-              className="absolute inset-0 z-0"
+              className="absolute z-10"
               style={{
+                top: "10%",
+                left: "0",
+                width: "100%",
+                height: "60%",
                 backgroundImage: `url(${productImage})`,
                 backgroundRepeat: "repeat",
-                backgroundSize: "300px 300px",
+                backgroundSize: "200px 200px",
+                mixBlendMode: "multiply",
+                opacity: 0.85,
               }}
             />
           )}
-
-          {/* Base Bathroom Mockup Image - With transparent areas where product should show */}
-          <Image
-            src="/assets/mockups/bathroom-mockup.png"
-            alt="Bathroom mockup"
-            fill
-            className="object-cover z-10 relative"
-            priority
-          />
         </div>
       </div>
 
