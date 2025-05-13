@@ -131,11 +131,5 @@ body {
 
 /* Content with sidebar */
 .content-with-sidebar {
-  @apply pl-16 lg:pl-16 w-full transition-all duration-300;
-}
-
-@media (max-width: 1023px) {
-  .content-with-sidebar-mobile-open {
-    @apply pl-64;
-  }
+  @apply pl-16 w-full;
 }

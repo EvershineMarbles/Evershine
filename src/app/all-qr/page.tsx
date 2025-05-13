@@ -5,14 +5,14 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Download, Loader2, Search, Grid, List, Check, LogOut } from "lucide-react"
+import { Download, Loader2, Search, Grid, List, Check } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { toast } from "sonner"
 import QRCode from "qrcode"
 import ProtectedRoute from "@/components/ProtectedRoute"
-import { logoutFeeder } from "@/lib/feeder-auth"
+import FeederLayout from "@/components/FeederLayout"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -38,22 +38,10 @@ function AllQR() {
   const [priceValues, setPriceValues] = useState<Record<string, string>>({})
   const [updatingPrice, setUpdatingPrice] = useState<Record<string, boolean>>({})
   const [generatingQR, setGeneratingQR] = useState<Record<string, boolean>>({})
-  const [feederName, setFeederName] = useState<string>("")
 
   useEffect(() => {
-    // Get feeder name from localStorage
-    if (typeof window !== "undefined") {
-      const name = localStorage.getItem("feederName")
-      setFeederName(name || "Feeder")
-    }
-
     fetchProducts()
   }, [])
-
-  const handleLogout = () => {
-    logoutFeeder()
-    router.push("/login")
-  }
 
   const fetchProducts = async () => {
     try {
@@ -261,37 +249,6 @@ function AllQR() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Dashboard Header Strip */}
-      <div className="w-full bg-[rgb(25,74,149)] py-4 px-6 shadow-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="text-white text-xl font-medium">Evershine Dashboard</h1>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleLogout}
-              className="flex items-center text-white hover:text-gray-200 transition-colors"
-            >
-              <LogOut className="h-5 w-5 mr-1" />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Back Button Header */}
-      <div className="sticky top-0 z-10 bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-          <div className="py-4">
-            <button
-              onClick={() => router.push("/products")}
-              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="h-6 w-6" />
-              <span className="ml-2">Back to Products</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6">
         {/* Header with Search */}
@@ -463,7 +420,9 @@ function AllQR() {
 export default function ProtectedAllQRPage() {
   return (
     <ProtectedRoute>
-      <AllQR />
+      <FeederLayout>
+        <AllQR />
+      </FeederLayout>
     </ProtectedRoute>
   )
 }

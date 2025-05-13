@@ -13,8 +13,6 @@ import {
   ChevronUp,
   Calculator,
   Download,
-  LogOut,
-  Home,
 } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -34,7 +32,7 @@ import QRCodeGenerator from "@/components/QRCodeGenerator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import ProductVisualizer from "@/components/ProductVisualizer"
 import ProtectedRoute from "@/components/ProtectedRoute"
-import { logoutFeeder } from "@/lib/feeder-auth"
+import FeederLayout from "@/components/FeederLayout"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -134,16 +132,9 @@ function ProductDetail() {
   const [showFullDescription, setShowFullDescription] = useState(false)
   const [quantityFormula, setQuantityFormula] = useState<string | null>(null)
   const [showVisualizer, setShowVisualizer] = useState(false)
-  const [feederName, setFeederName] = useState<string>("")
 
   // Update the useEffect to use this enhanced debugging
   useEffect(() => {
-    // Get feeder name from localStorage
-    if (typeof window !== "undefined") {
-      const name = localStorage.getItem("feederName")
-      setFeederName(name || "Feeder")
-    }
-
     const fetchProduct = async () => {
       try {
         setLoading(true)
@@ -207,11 +198,6 @@ function ProductDetail() {
 
     fetchProduct()
   }, [params.id])
-
-  const handleLogout = () => {
-    logoutFeeder()
-    router.push("/login")
-  }
 
   const handleDelete = async () => {
     try {
@@ -395,22 +381,6 @@ function ProductDetail() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Dashboard Header Strip */}
-      <div className="w-full bg-[rgb(25,74,149)] py-4 px-6 shadow-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="text-white text-xl font-medium">Evershine Dashboard</h1>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleLogout}
-              className="flex items-center text-white hover:text-gray-200 transition-colors"
-            >
-              <LogOut className="h-5 w-5 mr-1" />
-              <span>Logout</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
       <div className="p-6">
         {/* Back Button */}
         <button
@@ -719,7 +689,9 @@ function ProductDetail() {
 export default function ProtectedProductDetailPage() {
   return (
     <ProtectedRoute>
-      <ProductDetail />
+      <FeederLayout>
+        <ProductDetail />
+      </FeederLayout>
     </ProtectedRoute>
   )
 }
