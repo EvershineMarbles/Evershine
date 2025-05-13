@@ -12,6 +12,21 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
 
+/*************  ✨ Windsurf Command ⭐  *************/
+/**
+ * Feeder login page
+ *
+ * This page renders a form for the feeder to input their email and password.
+ * Upon submission, the form makes a POST request to the /api/feeder/login endpoint
+ * with the input credentials. If the request is successful, the page redirects
+ * to the feeder dashboard. If the request is not successful, the page displays
+ * an error message.
+ *
+ * The page also includes a link to the feeder registration page.
+ *
+ * @returns A JSX element representing the feeder login page
+ */
+/*******  4432a5e3-a902-42ef-8d0c-c8869c67c5a0  *******/
 export default function FeederLoginPage() {
   const router = useRouter()
   const { toast } = useToast()
