@@ -29,7 +29,7 @@ const MOCKUPS = [
   {
     id: "luxury-living",
     name: "Luxury Living",
-    src: "/assets/mockups/luxury-living.png",
+    src: "/assets/mockups/luxury-living.jpeg",
   },
   {
     id: "modern-bedroom",
@@ -74,28 +74,32 @@ export default function ProductVisualizer({ productImage, productName }: Product
             <div className="border rounded-lg p-4 bg-gray-50">
               <div className="relative rounded-lg overflow-hidden bg-white border">
                 {loading ? (
-                  <div className="flex items-center justify-center h-[450px]">
+                  <div className="flex items-center justify-center h-[300px]">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#194a95]"></div>
                   </div>
                 ) : (
-                  <div
-                    className="relative w-full"
-                    style={{
-                      aspectRatio: "1920/2651",
-                      maxWidth: "100%",
-                      backgroundImage: `url(${productImage})`,
-                      backgroundRepeat: "repeat",
-                      backgroundSize: "200px 200px",
-                    }}
-                  >
-                    {/* Mockup image with transparent areas */}
-                    <Image
-                      src={mockup.src || "/placeholder.svg"}
-                      alt={`${mockup.name} mockup with ${productName}`}
-                      fill
-                      className="object-contain"
-                      style={{ objectFit: "contain" }}
-                    />
+                  <div className="flex justify-center">
+                    <div
+                      className="relative"
+                      style={{
+                        aspectRatio: "1920/2651",
+                        width: "100%",
+                        maxWidth: "400px", // Limit the maximum width
+                        maxHeight: "550px", // Limit the maximum height
+                        backgroundImage: `url(${productImage})`,
+                        backgroundRepeat: "repeat",
+                        backgroundSize: "200px 200px",
+                      }}
+                    >
+                      {/* Mockup image with transparent areas */}
+                      <Image
+                        src={mockup.src || "/placeholder.svg"}
+                        alt={`${mockup.name} mockup with ${productName}`}
+                        fill
+                        className="object-contain"
+                        style={{ objectFit: "contain" }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
