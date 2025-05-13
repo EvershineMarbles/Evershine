@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import Image from "next/image"
+import { useState, useEffect, useRef } from "react"
 
 interface ProductVisualizerProps {
   productImage: string
@@ -9,68 +8,110 @@ interface ProductVisualizerProps {
 }
 
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
-  const [imageLoaded, setImageLoaded] = useState(false)
-  const [imageError, setImageError] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  // Handle image loading errors
   useEffect(() => {
-    // Create a test image to check if the product image can be loaded
-    const testImg = document.createElement("img")
-    testImg.crossOrigin = "anonymous" // Add this to avoid CORS issues
-    testImg.src = productImage
+    // Create a function to handle the visualization
+    const createVisualization = async () => {
+      try {
+        setLoading(true)
+        setError(null)
 
-    testImg.onload = () => {
-      setImageLoaded(true)
-      setImageError(false)
+        const canvas = canvasRef.current
+        if (!canvas) {
+          throw new Error("Canvas not available")
+        }
+
+        const ctx = canvas.getContext("2d")
+        if (!ctx) {
+          throw new Error("Canvas context not available")
+        }
+
+        // Set canvas dimensions
+        canvas.width = 800
+        canvas.height = 600
+
+        // Load the mockup image
+        const mockupImage = document.createElement("img")
+        mockupImage.crossOrigin = "anonymous"
+        mockupImage.src = "/assets/mockups/bathroom-mockup.png"
+
+        // Load the product texture
+        const productTextureImage = document.createElement("img")
+        productTextureImage.crossOrigin = "anonymous"
+        productTextureImage.src = productImage
+
+        // Wait for both images to load
+        await Promise.all([
+          new Promise<void>((resolve, reject) => {
+            mockupImage.onload = () => resolve()
+            mockupImage.onerror = () => reject(new Error("Failed to load mockup image"))
+          }),
+          new Promise<void>((resolve, reject) => {
+            productTextureImage.onload = () => resolve()
+            productTextureImage.onerror = () => reject(new Error("Failed to load product texture"))
+          }),
+        ])
+
+        // Clear the canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+        // Create a pattern from the product texture
+        const pattern = ctx.createPattern(productTextureImage, "repeat")
+        if (!pattern) {
+          throw new Error("Failed to create pattern from product texture")
+        }
+
+        // Fill the entire canvas with the product texture first
+        ctx.fillStyle = pattern
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+        // Draw the mockup image on top
+        ctx.drawImage(mockupImage, 0, 0, canvas.width, canvas.height)
+
+        setLoading(false)
+      } catch (err) {
+        console.error("Error creating visualization:", err)
+        setError(err instanceof Error ? err.message : "Failed to create visualization")
+        setLoading(false)
+      }
     }
 
-    testImg.onerror = () => {
-      console.warn("Product image failed to load, using fallback visualization")
-      setImageError(true)
-      setImageLoaded(true) // Still set to true so we show the visualization without the product texture
-    }
-
-    return () => {
-      testImg.onload = null
-      testImg.onerror = null
-    }
+    createVisualization()
   }, [productImage])
 
   return (
     <div className="w-full">
       <h2 className="text-2xl font-bold mb-6">Product Visualizer</h2>
 
-      {/* Visualization Area */}
       <div className="border rounded-lg overflow-hidden bg-white">
-        <div className="relative aspect-[4/3] w-full">
-          {/* Product Texture Background - This will be visible through transparent areas of the mockup */}
-          {imageLoaded && !imageError && (
-            <div
-              className="absolute inset-0 z-0"
-              style={{
-                backgroundImage: `url(${productImage})`,
-                backgroundRepeat: "repeat",
-                backgroundSize: "300px 300px",
-              }}
-            />
-          )}
-
-          {/* Base Bathroom Mockup Image - With transparent areas where product should show */}
-          <Image
-            src="/assets/mockups/bathroom-mockup.png"
-            alt="Bathroom mockup"
-            fill
-            className="object-cover z-10 relative"
-            priority
-          />
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center h-[600px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#194a95]"></div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-[600px] p-4 text-center">
+            <p className="text-red-500">
+              Failed to generate visualization: {error}
+              <br />
+              <span className="text-sm text-gray-500 mt-2">
+                Please try again or contact support if the issue persists.
+              </span>
+            </p>
+          </div>
+        ) : (
+          <div className="relative">
+            <canvas ref={canvasRef} className="w-full h-auto" style={{ maxHeight: "600px", objectFit: "contain" }} />
+          </div>
+        )}
       </div>
 
-      {/* Simple Instruction */}
       <p className="text-sm text-gray-500 mt-4 text-center">
         This is a visualization of how {productName} might look in a bathroom setting.
-        {imageError && " (Using default visualization due to image loading error)"}
       </p>
     </div>
   )
 }
+
