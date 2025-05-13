@@ -24,12 +24,12 @@ const MOCKUPS = [
   {
     id: "living-room",
     name: "Living Room",
-    src: "/assets/mockups/living-room.png",
+    src: "/assets/mockups/living-room.jpeg",
   },
   {
     id: "luxury-living",
     name: "Luxury Living",
-    src: "/assets/mockups/luxury-living.jpeg",
+    src: "/assets/mockups/luxury-living.png",
   },
   {
     id: "modern-bedroom",
@@ -42,6 +42,7 @@ const MOCKUPS = [
     src: "/assets/mockups/minimalist.png",
   },
 ]
+
 
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
@@ -79,25 +80,32 @@ export default function ProductVisualizer({ productImage, productName }: Product
                   </div>
                 ) : (
                   <div className="flex justify-center">
+                    {/* Container with fixed dimensions */}
                     <div
                       className="relative"
                       style={{
-                        aspectRatio: "1920/2651",
-                        width: "100%",
-                        maxWidth: "400px", // Limit the maximum width
-                        maxHeight: "550px", // Limit the maximum height
-                        backgroundImage: `url(${productImage})`,
-                        backgroundRepeat: "repeat",
-                        backgroundSize: "200px 200px",
+                        width: "400px",
+                        height: "550px",
+                        maxWidth: "100%",
                       }}
                     >
-                      {/* Mockup image with transparent areas */}
+                      {/* Base mockup image */}
                       <Image
                         src={mockup.src || "/placeholder.svg"}
-                        alt={`${mockup.name} mockup with ${productName}`}
+                        alt={`${mockup.name} mockup`}
                         fill
                         className="object-contain"
                         style={{ objectFit: "contain" }}
+                      />
+
+                      {/* Product texture overlay - will be masked by the mockup's transparent areas */}
+                      <div
+                        className="absolute inset-0 z-[-1]"
+                        style={{
+                          backgroundImage: `url(${productImage})`,
+                          backgroundRepeat: "repeat",
+                          backgroundSize: "200px 200px",
+                        }}
                       />
                     </div>
                   </div>
