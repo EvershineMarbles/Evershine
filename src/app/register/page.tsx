@@ -2,225 +2,173 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react'
-import { registerFeeder } from "@/lib/feeder-auth"
+import { useToast } from "@/components/ui/use-toast"
+import { Loader2 } from 'lucide-react'
 
-export default function FeederRegister() {
+export default function FeederRegisterPage() {
   const router = useRouter()
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
   })
-  const [errors, setErrors] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const [apiError, setApiError] = useState("")
-  const [success, setSuccess] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-    // Clear error when user types
-    setErrors((prev) => ({
-      ...prev,
-      [name]: "",
-    }))
-  }
-
-  const validateForm = () => {
-    let valid = true
-    const newErrors = { ...errors }
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required"
-      valid = false
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required"
-      valid = false
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid"
-      valid = false
-    }
-
-    if (!formData.password) {
-      newErrors.password = "Password is required"
-      valid = false
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters"
-      valid = false
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match"
-      valid = false
-    }
-
-    setErrors(newErrors)
-    return valid
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setApiError("")
-
-    if (!validateForm()) {
+    
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please make sure your passwords match.",
+        variant: "destructive",
+      })
       return
     }
-
+    
     setIsLoading(true)
 
     try {
-      const response = await registerFeeder(formData.name, formData.email, formData.password)
+      // Make API call to register feeder
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://evershinebackend-2.onrender.com'}/api/feeder/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      })
 
-      if (response.success) {
-        setSuccess(true)
-        // Reset form
-        setFormData({
-          name: "",
-          email: "",
-          password: "",
-          confirmPassword: "",
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "Registration successful",
+          description: "Your account has been created. You can now log in.",
+          variant: "default",
         })
 
-        // Redirect after 2 seconds
-        setTimeout(() => {
-          router.push("/feeder/login")
-        }, 2000)
+        // Redirect to login page
+        router.push("/feeder/login")
       } else {
-        throw new Error(response.message || "Failed to register")
+        toast({
+          title: "Registration failed",
+          description: data.message || "An error occurred during registration.",
+          variant: "destructive",
+        })
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Registration error:", error)
-      setApiError(error.message || "An error occurred during registration")
+      toast({
+        title: "Registration failed",
+        description: "An error occurred during registration. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 md:p-12 bg-gray-50">
-      <div className="w-full max-w-md">
-        <div className="w-full flex flex-col items-center relative mb-8">
-          <Link href="/" className="absolute left-0 top-0 inline-flex items-center text-dark hover:underline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Home
-          </Link>
-          <Image src="/logo.png" alt="Evershine Logo" width={150} height={90} priority className="mt-8" />
-        </div>
-
-        <Card className="w-full shadow-lg border-0">
-          <CardHeader className="space-y-1 bg-green-600/5 border-b pb-4">
-            <CardTitle className="text-2xl text-center text-green-600">Create Feeder Account</CardTitle>
-            <CardDescription className="text-center">Register as a feeder to manage products</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {apiError && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{apiError}</AlertDescription>
-              </Alert>
-            )}
-
-            {success && (
-              <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <AlertDescription>Account created successfully! Redirecting to login...</AlertDescription>
-              </Alert>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  placeholder="Enter your full name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  disabled={isLoading || success}
-                />
-                {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  disabled={isLoading || success}
-                />
-                {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="Create a password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  disabled={isLoading || success}
-                />
-                {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  disabled={isLoading || success}
-                />
-                {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full h-12 mt-6 bg-green-600 hover:bg-green-700 text-white rounded-md text-base"
-                disabled={isLoading || success}
-              >
-                {isLoading ? "Creating Account..." : "Create Feeder Account"}
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <p className="text-sm text-center">
-              Already have an account?{" "}
-              <Link href="/feeder/login" className="text-green-600 hover:underline">
-                Login here
-              </Link>
-            </p>
-          </CardFooter>
-        </Card>
-      </div>
-    </main>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <Card className="w-full max-w-md shadow-lg border-0">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-6">
+            <Image src="/logo.png" alt="Evershine Logo" width={180} height={100} priority />
+          </div>
+          <CardTitle className="text-2xl font-bold text-blue">Feeder Registration</CardTitle>
+          <CardDescription>Create your feeder account to get started</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                name="name"
+                placeholder="Enter your full name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Create a password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <Button type="submit" className="w-full bg-blue hover:bg-blue/90 text-white" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Registering...
+                </>
+              ) : (
+                "Register"
+              )}
+            </Button>
+          </form>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <p className="text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Button variant="link" className="p-0 h-auto text-blue" onClick={() => router.push("/feeder/login")}>
+              Login
+            </Button>
+          </p>
+        </CardFooter>
+      </Card>
+    </div>
   )
 }
