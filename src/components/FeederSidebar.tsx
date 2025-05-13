@@ -42,8 +42,9 @@ export function FeederSidebar() {
 
   return (
     <div className="fixed top-0 left-0 h-screen w-16 flex flex-col bg-black text-white shadow-lg">
-      {/* Blue top strip */}
-      <div className="w-full h-6 bg-[#194a95]"></div>
+      {/* Black strip is now the container itself */}
+      {/* Blue strip below the black strip */}
+      <div className="w-full h-6 bg-[#194a95] mt-0"></div>
 
       <div className="sidebar-icon mt-4">
         <span className="text-xl font-bold">F</span>
