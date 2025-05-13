@@ -362,7 +362,7 @@ function AllQR() {
                 <tr key={product._id} className="hover:bg-gray-50">
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <Link href={`/product/${product.postId}`} className="h-10 w-10 flex-shrink-0 mr-3 block">
+                      <Link href={`/single_product/${product.postId}`} className="h-10 w-10 flex-shrink-0 mr-3 block">
                         <Image
                           src={product.image[0] || "/placeholder.svg"}
                           alt={product.name}
@@ -376,7 +376,7 @@ function AllQR() {
                       </Link>
                       <div className="ml-2">
                         <Link
-                          href={`/product/${product.postId}`}
+                          href={`/single_product/${product.postId}`}
                           className="text-sm font-medium text-gray-900 hover:text-[#194a95] transition-colors cursor-pointer"
                         >
                           {product.name}
@@ -415,7 +415,7 @@ function AllQR() {
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-right">
                     <div className="flex justify-end space-x-2">
-                      <Link href={`/product/${product.postId}`} passHref>
+                      <Link href={`/single_product/${product.postId}`} passHref>
                         <Button variant="outline" size="sm" className="text-[#194a95] border-[#194a95]">
                           Preview
                         </Button>
