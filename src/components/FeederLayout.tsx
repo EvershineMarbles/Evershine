@@ -13,7 +13,7 @@ export default function FeederLayout({ children }: FeederLayoutProps) {
       <FeederSidebar />
       <div className="content-with-sidebar flex-1 flex flex-col">
         {/* Blue top strip for the content area */}
-        <div className="h-3 w-full bg-[#194a95] sticky top-0 z-10"></div>
+        <div className="h-10 w-full bg-[#194a95] sticky top-0 z-10"></div>
         <div className="flex-1">{children}</div>
       </div>
     </div>
