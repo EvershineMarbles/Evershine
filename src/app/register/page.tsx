@@ -230,7 +230,7 @@ export default function FeederRegisterPage() {
           <CardFooter className="flex justify-center">
             <p className="text-sm text-center">
               Already have an account?{" "}
-              <Link href="/feeder/login" className="text-[#1E40AF] hover:underline">
+              <Link href="/login" className="text-[#1E40AF] hover:underline">
                 Login here
               </Link>
             </p>
