@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, CheckCircle2, ArrowLeft, Loader2 } from "lucide-react"
+import { AlertCircle, CheckCircle2, ArrowLeft, Loader2 } from 'lucide-react'
 import { loginFeeder } from "@/lib/feeder-auth"
 
 export default function FeederLoginPage() {
@@ -125,8 +125,8 @@ export default function FeederLoginPage() {
         </div>
 
         <Card className="w-full shadow-lg border-0">
-          <CardHeader className="space-y-1 bg-blue/5 border-b pb-4">
-            <CardTitle className="text-2xl text-center text-blue">Feeder Login</CardTitle>
+          <CardHeader className="space-y-1 bg-[#1E40AF]/5 border-b pb-4">
+            <CardTitle className="text-2xl text-center text-[#1E40AF]">Feeder Login</CardTitle>
             <CardDescription className="text-center">Login to access the feeder dashboard</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
@@ -175,7 +175,7 @@ export default function FeederLoginPage() {
 
               <Button
                 type="submit"
-                className="w-full h-12 mt-6 bg-blue hover:bg-blue/90 text-white rounded-md text-base"
+                className="w-full h-12 mt-6 bg-[#1E40AF] hover:bg-[#1E40AF]/90 text-white rounded-md text-base"
                 disabled={isLoading || success}
               >
                 {isLoading ? (
@@ -192,7 +192,7 @@ export default function FeederLoginPage() {
           <CardFooter className="flex justify-center">
             <p className="text-sm text-center">
               Don&apos;t have an account?{" "}
-              <Link href="/feeder/register" className="text-blue hover:underline">
+              <Link href="/feeder/register" className="text-[#1E40AF] hover:underline">
                 Register here
               </Link>
             </p>
