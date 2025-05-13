@@ -136,8 +136,8 @@ export default function FeederRegisterPage() {
         </div>
 
         <Card className="w-full shadow-lg border-0">
-          <CardHeader className="space-y-1 bg-blue/5 border-b pb-4">
-            <CardTitle className="text-2xl text-center text-blue">Feeder Registration</CardTitle>
+          <CardHeader className="space-y-1 bg-[#1E40AF]/5 border-b pb-4">
+            <CardTitle className="text-2xl text-center text-[#1E40AF]">Feeder Registration</CardTitle>
             <CardDescription className="text-center">Create your feeder account to get started</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
@@ -213,7 +213,7 @@ export default function FeederRegisterPage() {
 
               <Button
                 type="submit"
-                className="w-full h-12 mt-6 bg-blue hover:bg-blue/90 text-white rounded-md text-base"
+                className="w-full h-12 mt-6 bg-[#1E40AF] hover:bg-[#1E40AF]/90 text-white rounded-md text-base"
                 disabled={isLoading || success}
               >
                 {isLoading ? (
@@ -230,7 +230,7 @@ export default function FeederRegisterPage() {
           <CardFooter className="flex justify-center">
             <p className="text-sm text-center">
               Already have an account?{" "}
-              <Link href="/feeder/login" className="text-blue hover:underline">
+              <Link href="/feeder/login" className="text-[#1E40AF] hover:underline">
                 Login here
               </Link>
             </p>
