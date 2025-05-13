@@ -107,3 +107,35 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Sidebar Styles */
+.sidebar-icon {
+  @apply relative flex items-center justify-center h-12 w-12 mx-auto my-1 
+         bg-transparent text-white hover:bg-white/20 
+         rounded-lg transition-all duration-200 ease-linear cursor-pointer;
+}
+
+.sidebar-tooltip {
+  @apply absolute w-auto p-2 m-2 min-w-max left-14 
+         rounded-md shadow-md text-white bg-gray-900 
+         text-xs font-bold transition-all duration-100 scale-0 origin-left;
+}
+
+.sidebar-icon:hover .sidebar-tooltip {
+  @apply scale-100;
+}
+
+.sidebar-hr {
+  @apply bg-white/20 border border-white/20 rounded-full mx-2;
+}
+
+/* Content with sidebar */
+.content-with-sidebar {
+  @apply pl-16 lg:pl-16 w-full transition-all duration-300;
+}
+
+@media (max-width: 1023px) {
+  .content-with-sidebar-mobile-open {
+    @apply pl-64;
+  }
+}

@@ -6,10 +6,10 @@ import { useState, useEffect } from "react"
 import axios from "axios"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Search, Pencil, ArrowLeft, Loader2, Grid, List, LogOut } from "lucide-react"
+import { Search, Pencil, Loader2, Grid, List } from "lucide-react"
 import Image from "next/image"
 import ProtectedRoute from "@/components/ProtectedRoute"
-import { logoutFeeder } from "@/lib/feeder-auth"
+import FeederLayout from "@/components/FeederLayout"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -29,15 +29,8 @@ function Products() {
   const [searchQuery, setSearchQuery] = useState("")
   const [imageError, setImageError] = useState<Record<string, boolean>>({})
   const [editLoading, setEditLoading] = useState<string | null>(null)
-  const [feederName, setFeederName] = useState<string>("")
 
   useEffect(() => {
-    // Get feeder name from localStorage
-    if (typeof window !== "undefined") {
-      const name = localStorage.getItem("feederName")
-      setFeederName(name || "Feeder")
-    }
-
     fetchProducts()
   }, [])
 
@@ -73,11 +66,6 @@ function Products() {
     }
   }
 
-  const handleLogout = () => {
-    logoutFeeder()
-    router.push("/login")
-  }
-
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesSearch
@@ -97,37 +85,6 @@ function Products() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Dashboard Header Strip */}
-      <div className="w-full bg-[rgb(25,74,149)] py-4 px-6 shadow-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="text-white text-xl font-medium">Evershine Dashboard</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-white">Welcome, {feederName}</span>
-            <button
-              onClick={handleLogout}
-              className="flex items-center text-white hover:text-gray-200 transition-colors"
-            >
-              <LogOut className="h-5 w-5 mr-1" />
-              <span>Logout</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Back Button Header */}
-      <div className="sticky top-0 z-10 bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-          <div className="py-4">
-            <button
-              onClick={() => router.push("https://evershine-two.vercel.app/")}
-              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="h-6 w-6" />
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6">
         {/* Header with Search */}
@@ -178,13 +135,13 @@ function Products() {
         </p>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 mb-8">
           {filteredProducts.map((product) => (
             <div
               key={product._id}
               className="group relative bg-white rounded-2xl overflow-hidden border border-gray-200/80 hover:border-gray-300/80 transition-colors"
             >
-              <Link href={`/single_product/${product.postId}`} className="block">
+              <Link href={`/product/${product.postId}`} className="block">
                 <div className="p-3">
                   <div
                     className="relative w-full overflow-hidden rounded-xl bg-gray-50
@@ -262,7 +219,9 @@ function Products() {
 export default function ProtectedProductsPage() {
   return (
     <ProtectedRoute>
-      <Products />
+      <FeederLayout>
+        <Products />
+      </FeederLayout>
     </ProtectedRoute>
   )
 }
