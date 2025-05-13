@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState } from "react"
+import Image from "next/image"
 
 interface ProductVisualizerProps {
   productImage: string
@@ -21,81 +22,21 @@ const MOCKUPS = [
   },
 ]
 
+// Overlay positions for wall and floor in each mockup
+const OVERLAY_POSITIONS = {
+  bathroom: [
+    { id: "wall", top: "0", left: "0", width: "100%", height: "60%", opacity: 0.5 },
+    { id: "floor", top: "60%", left: "0", width: "100%", height: "40%", opacity: 0.7 },
+  ],
+  "living-room": [
+    { id: "wall", top: "0", left: "0", width: "100%", height: "70%", opacity: 0.3 },
+    { id: "floor", top: "70%", left: "0", width: "100%", height: "30%", opacity: 0.7 },
+  ],
+}
+
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
-  const [loading, setLoading] = useState(true)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    // Create a function to handle the visualization
-    const createVisualization = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const canvas = canvasRef.current
-        if (!canvas) {
-          throw new Error("Canvas not available")
-        }
-
-        const ctx = canvas.getContext("2d")
-        if (!ctx) {
-          throw new Error("Canvas context not available")
-        }
-
-        // Set canvas dimensions
-        canvas.width = 800
-        canvas.height = 600
-
-        // Load the mockup image
-        const mockupImage = document.createElement("img")
-        mockupImage.crossOrigin = "anonymous"
-        mockupImage.src = MOCKUPS.find((m) => m.id === activeTab)?.src || MOCKUPS[0].src
-
-        // Load the product texture
-        const productTextureImage = document.createElement("img")
-        productTextureImage.crossOrigin = "anonymous"
-        productTextureImage.src = productImage
-
-        // Wait for both images to load
-        await Promise.all([
-          new Promise<void>((resolve, reject) => {
-            mockupImage.onload = () => resolve()
-            mockupImage.onerror = () => reject(new Error("Failed to load mockup image"))
-          }),
-          new Promise<void>((resolve, reject) => {
-            productTextureImage.onload = () => resolve()
-            productTextureImage.onerror = () => reject(new Error("Failed to load product texture"))
-          }),
-        ])
-
-        // Clear the canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-        // Create a pattern from the product texture
-        const pattern = ctx.createPattern(productTextureImage, "repeat")
-        if (!pattern) {
-          throw new Error("Failed to create pattern from product texture")
-        }
-
-        // Fill the entire canvas with the product texture first
-        ctx.fillStyle = pattern
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-        // Draw the mockup image on top
-        ctx.drawImage(mockupImage, 0, 0, canvas.width, canvas.height)
-
-        setLoading(false)
-      } catch (err) {
-        console.error("Error creating visualization:", err)
-        setError(err instanceof Error ? err.message : "Failed to create visualization")
-        setLoading(false)
-      }
-    }
-
-    createVisualization()
-  }, [productImage, activeTab])
+  const [imageLoaded, setImageLoaded] = useState(false)
 
   return (
     <div className="w-full">
@@ -118,35 +59,51 @@ export default function ProductVisualizer({ productImage, productName }: Product
         ))}
       </div>
 
-      {/* Visualization Area */}
-      <div className="border rounded-lg p-4 bg-gray-50">
-        <div className="relative rounded-lg overflow-hidden bg-white border">
-          {loading ? (
-            <div className="flex items-center justify-center h-[450px]">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#194a95]"></div>
-            </div>
-          ) : error ? (
-            <div className="flex items-center justify-center h-[450px] p-4 text-center">
-              <p className="text-red-500">
-                Failed to generate visualization: {error}
-                <br />
-                <span className="text-sm text-gray-500 mt-2">
-                  Please try again or contact support if the issue persists.
-                </span>
-              </p>
-            </div>
-          ) : (
-            <div className="relative">
-              <canvas ref={canvasRef} className="w-full h-auto" style={{ maxHeight: "600px", objectFit: "contain" }} />
-            </div>
-          )}
-        </div>
+      {/* Tab Content */}
+      {MOCKUPS.map((mockup) => (
+        <div key={mockup.id} className={activeTab === mockup.id ? "block" : "hidden"}>
+          <div className="border rounded-lg p-4 bg-gray-50">
+            {/* Visualization Area */}
+            <div className="relative rounded-lg overflow-hidden bg-white border">
+              <div className="relative aspect-[4/3] w-full">
+                {/* Base Mockup Image */}
+                <Image
+                  src={mockup.src || "/placeholder.svg"}
+                  alt={`${mockup.name} mockup`}
+                  fill
+                  className="object-cover"
+                  onLoad={() => setImageLoaded(true)}
+                />
 
-        {/* Simple Instruction */}
-        <p className="text-sm text-gray-500 mt-4 text-center">
-          This is a visualization of how {productName} might look in this space.
-        </p>
-      </div>
+                {/* Product Texture Overlays - Apply to both wall and floor */}
+                {imageLoaded &&
+                  OVERLAY_POSITIONS[mockup.id as keyof typeof OVERLAY_POSITIONS].map((overlay) => (
+                    <div
+                      key={overlay.id}
+                      className="absolute z-10"
+                      style={{
+                        top: overlay.top,
+                        left: overlay.left,
+                        width: overlay.width,
+                        height: overlay.height,
+                        opacity: overlay.opacity,
+                        backgroundImage: `url(${productImage})`,
+                        backgroundRepeat: "repeat",
+                        backgroundSize: "200px 200px",
+                        mixBlendMode: "multiply",
+                      }}
+                    />
+                  ))}
+              </div>
+            </div>
+
+            {/* Simple Instruction */}
+            <p className="text-sm text-gray-500 mt-4 text-center">
+              This is a visualization of how {productName} might look in this space.
+            </p>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
