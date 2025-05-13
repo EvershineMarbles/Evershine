@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Image from "next/image"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
 interface ProductVisualizerProps {
@@ -14,45 +13,60 @@ const MOCKUPS = [
   {
     id: "bathroom",
     name: "Bathroom",
-    src: "/assets/mockups/bathroom.png",
+    src: "/assets/mockups/bathroom-mockup.png",
   },
   {
     id: "bedroom-green",
     name: "Bedroom (Green)",
-    src: "/assets/mockups/bedroom-green.png",
+    src: "/assets/mockups/bedroom-green-mockup.png",
   },
   {
     id: "living-room",
     name: "Living Room",
-    src: "/assets/mockups/living-room.jpeg",
+    src: "/assets/mockups/living-room-mockup.png",
   },
   {
     id: "luxury-living",
     name: "Luxury Living",
-    src: "/assets/mockups/luxury-living.png",
+    src: "/assets/mockups/luxury-living-mockup.png",
   },
   {
     id: "modern-bedroom",
     name: "Modern Bedroom",
-    src: "/assets/mockups/modern-bedroom.png",
+    src: "/assets/mockups/modern-bedroom-mockup.png",
   },
   {
     id: "minimalist",
     name: "Minimalist",
-    src: "/assets/mockups/minimalist.png",
+    src: "/assets/mockups/minimalist-mockup.png",
   },
 ]
-
 
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const [loading, setLoading] = useState(true)
+  const [imageDimensions, setImageDimensions] = useState<Record<string, { width: number; height: number }>>({})
 
   useEffect(() => {
     // Set a timeout to simulate loading and ensure the DOM is ready
     const timer = setTimeout(() => {
       setLoading(false)
     }, 1000)
+
+    // Preload images to get their dimensions
+    MOCKUPS.forEach((mockup) => {
+      const img = document.createElement("img")
+      img.onload = () => {
+        setImageDimensions((prev) => ({
+          ...prev,
+          [mockup.id]: {
+            width: img.width,
+            height: img.height,
+          },
+        }))
+      }
+      img.src = mockup.src
+    })
 
     return () => clearTimeout(timer)
   }, [])
@@ -80,32 +94,20 @@ export default function ProductVisualizer({ productImage, productName }: Product
                   </div>
                 ) : (
                   <div className="flex justify-center">
-                    {/* Container with fixed dimensions */}
                     <div
                       className="relative"
                       style={{
-                        width: "400px",
-                        height: "550px",
-                        maxWidth: "100%",
+                        backgroundImage: `url(${productImage})`,
+                        backgroundRepeat: "repeat",
+                        backgroundSize: "200px 200px",
                       }}
                     >
-                      {/* Base mockup image */}
-                      <Image
+                      {/* Mockup image with transparent areas */}
+                      <img
                         src={mockup.src || "/placeholder.svg"}
-                        alt={`${mockup.name} mockup`}
-                        fill
-                        className="object-contain"
-                        style={{ objectFit: "contain" }}
-                      />
-
-                      {/* Product texture overlay - will be masked by the mockup's transparent areas */}
-                      <div
-                        className="absolute inset-0 z-[-1]"
-                        style={{
-                          backgroundImage: `url(${productImage})`,
-                          backgroundRepeat: "repeat",
-                          backgroundSize: "200px 200px",
-                        }}
+                        alt={`${mockup.name} mockup with ${productName}`}
+                        className="max-w-full h-auto"
+                        style={{ display: "block" }}
                       />
                     </div>
                   </div>
