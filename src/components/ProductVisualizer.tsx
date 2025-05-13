@@ -52,7 +52,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
             priority
           />
 
-          {/* Product Texture Overlay - Applied to the entire white wall area */}
+          {/* Product Texture Overlay - Applied to the blank space in the mockup */}
           {imageLoaded && !imageError && (
             <div
               className="absolute z-10"
@@ -60,12 +60,14 @@ export default function ProductVisualizer({ productImage, productName }: Product
                 top: "0",
                 left: "0",
                 width: "100%",
-                height: "50%", // Cover the top half (white wall area)
+                height: "100%",
                 backgroundImage: `url(${productImage})`,
                 backgroundRepeat: "repeat",
                 backgroundSize: "300px 300px",
                 mixBlendMode: "multiply",
                 opacity: 0.9,
+                // The PNG mockup should have transparency where we want to apply the texture
+                // So the texture will show through only in those areas
               }}
             />
           )}
