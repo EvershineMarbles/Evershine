@@ -34,24 +34,18 @@ export function FeederSidebar() {
       icon: PlusCircle,
     },
     {
-      name: "Edit Products",
-      href: "/edit-products",
-      icon: Edit,
-    },
-    {
       name: "Bulk Edit",
-      href: "/bulk-edit",
+      href: "/all-qr",
       icon: ListPlus,
     },
-    {
-      name: "QR Codes",
-      href: "/all-qr",
-      icon: QrCode,
-    },
+  
   ]
 
   return (
-    <div className="fixed top-0 left-0 h-screen w-16 flex flex-col bg-[#194a95] text-white shadow-lg">
+    <div className="fixed top-0 left-0 h-screen w-16 flex flex-col bg-black text-white shadow-lg">
+      {/* Blue top strip */}
+      <div className="w-full h-3 bg-[#194a95]"></div>
+
       <div className="sidebar-icon mt-4">
         <span className="text-xl font-bold">F</span>
       </div>
@@ -66,7 +60,7 @@ export function FeederSidebar() {
                 href={route.href}
                 className={cn(
                   "sidebar-icon",
-                  pathname === route.href || pathname.startsWith(route.href + "/") ? "bg-white/20" : "",
+                  pathname === route.href || pathname.startsWith(route.href + "/") ? "bg-[#194a95]" : "",
                 )}
               >
                 <route.icon size={24} />
