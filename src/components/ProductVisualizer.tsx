@@ -44,31 +44,16 @@ const MOCKUPS = [
 ]
 
 
+
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const [loading, setLoading] = useState(true)
-  const [imageDimensions, setImageDimensions] = useState<Record<string, { width: number; height: number }>>({})
 
   useEffect(() => {
     // Set a timeout to simulate loading and ensure the DOM is ready
     const timer = setTimeout(() => {
       setLoading(false)
     }, 1000)
-
-    // Preload images to get their dimensions
-    MOCKUPS.forEach((mockup) => {
-      const img = document.createElement("img")
-      img.onload = () => {
-        setImageDimensions((prev) => ({
-          ...prev,
-          [mockup.id]: {
-            width: img.width,
-            height: img.height,
-          },
-        }))
-      }
-      img.src = mockup.src
-    })
 
     return () => clearTimeout(timer)
   }, [])
@@ -99,17 +84,22 @@ export default function ProductVisualizer({ productImage, productName }: Product
                     <div
                       className="relative"
                       style={{
+                        aspectRatio: "1920/2651",
+                        width: "100%",
+                        maxWidth: "400px", // Limit the maximum width
+                        maxHeight: "550px", // Limit the maximum height
                         backgroundImage: `url(${productImage})`,
                         backgroundRepeat: "repeat",
                         backgroundSize: "200px 200px",
                       }}
                     >
                       {/* Mockup image with transparent areas */}
-                      <img
+                      <Image
                         src={mockup.src || "/placeholder.svg"}
                         alt={`${mockup.name} mockup with ${productName}`}
-                        className="max-w-full h-auto"
-                        style={{ display: "block" }}
+                        fill
+                        className="object-contain"
+                        style={{ objectFit: "contain" }}
                       />
                     </div>
                   </div>
