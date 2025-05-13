@@ -415,11 +415,6 @@ function AllQR() {
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-right">
                     <div className="flex justify-end space-x-2">
-                      <Link href={`/single_product/${product.postId}`} passHref>
-                        <Button variant="outline" size="sm" className="text-[#194a95] border-[#194a95]">
-                          Preview
-                        </Button>
-                      </Link>
                       <Button
                         onClick={() => generateAndDownloadQR(product)}
                         size="sm"
