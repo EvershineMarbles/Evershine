@@ -45,7 +45,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
         <div className="relative aspect-[4/3] w-full">
           {/* Base Bathroom Mockup Image */}
           <Image
-            src="/assets/mockups/bathroom-mockup.jpeg"
+            src="/assets/mockups/bathroom-mockup.png"
             alt="Bathroom mockup"
             fill
             className="object-cover"
