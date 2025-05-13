@@ -15,7 +15,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
   // Handle image loading errors
   useEffect(() => {
     // Create a test image to check if the product image can be loaded
-    const testImg = new Image()
+    const testImg = document.createElement("img")
     testImg.crossOrigin = "anonymous" // Add this to avoid CORS issues
     testImg.src = productImage
 
@@ -52,20 +52,20 @@ export default function ProductVisualizer({ productImage, productName }: Product
             priority
           />
 
-          {/* Product Texture Overlay - Applied to the wall area behind the tub */}
+          {/* Product Texture Overlay - Applied to the entire white wall area */}
           {imageLoaded && !imageError && (
             <div
               className="absolute z-10"
               style={{
-                top: "10%",
+                top: "0",
                 left: "0",
                 width: "100%",
-                height: "60%",
+                height: "50%", // Cover the top half (white wall area)
                 backgroundImage: `url(${productImage})`,
                 backgroundRepeat: "repeat",
-                backgroundSize: "200px 200px",
+                backgroundSize: "300px 300px",
                 mixBlendMode: "multiply",
-                opacity: 0.85,
+                opacity: 0.9,
               }}
             />
           )}
