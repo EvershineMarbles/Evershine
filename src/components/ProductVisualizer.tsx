@@ -1,66 +1,42 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Image from "next/image"
-import { Button } from "@/components/ui/button"
 
 interface ProductVisualizerProps {
   productImage: string
   productName: string
 }
 
-// Define mockup rooms and their target areas
+// Define mockup rooms
 const MOCKUPS = [
   {
     id: "bathroom",
     name: "Bathroom",
     src: "/assets/mockups/bathroom-mockup.png",
-    areas: [
-      { id: "floor", name: "Floor" },
-      { id: "wall", name: "Wall" },
-    ],
   },
   {
     id: "living-room",
     name: "Living Room",
     src: "/assets/mockups/living-room-mockup.jpeg",
-    areas: [
-      { id: "floor", name: "Floor" },
-      { id: "wall", name: "Wall" },
-    ],
   },
 ]
 
-// Simple overlay positions for each mockup and area
+// Overlay positions for wall and floor in each mockup
 const OVERLAY_POSITIONS = {
-  bathroom: {
-    floor: { top: "60%", left: "0", width: "100%", height: "40%", opacity: 0.7 },
-    wall: { top: "0", left: "0", width: "100%", height: "60%", opacity: 0.5 },
-  },
-  "living-room": {
-    floor: { top: "70%", left: "0", width: "100%", height: "30%", opacity: 0.7 },
-    wall: { top: "0", left: "0", width: "100%", height: "70%", opacity: 0.3 },
-  },
+  bathroom: [
+    { id: "wall", top: "0", left: "0", width: "100%", height: "60%", opacity: 0.5 },
+    { id: "floor", top: "60%", left: "0", width: "100%", height: "40%", opacity: 0.7 },
+  ],
+  "living-room": [
+    { id: "wall", top: "0", left: "0", width: "100%", height: "70%", opacity: 0.3 },
+    { id: "floor", top: "70%", left: "0", width: "100%", height: "30%", opacity: 0.7 },
+  ],
 }
 
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
-  const [selectedArea, setSelectedArea] = useState<Record<string, string>>({})
   const [imageLoaded, setImageLoaded] = useState(false)
-
-  // Initialize selected areas
-  useEffect(() => {
-    const initialSelectedArea: Record<string, string> = {}
-    MOCKUPS.forEach((mockup) => {
-      initialSelectedArea[mockup.id] = mockup.areas[0].id
-    })
-    setSelectedArea(initialSelectedArea)
-  }, [])
-
-  // Handle area selection
-  const handleAreaChange = (mockupId: string, areaId: string) => {
-    setSelectedArea((prev) => ({ ...prev, [mockupId]: areaId }))
-  }
 
   return (
     <div className="w-full">
@@ -87,21 +63,6 @@ export default function ProductVisualizer({ productImage, productName }: Product
       {MOCKUPS.map((mockup) => (
         <div key={mockup.id} className={activeTab === mockup.id ? "block" : "hidden"}>
           <div className="border rounded-lg p-4 bg-gray-50">
-            {/* Area Selection Buttons */}
-            <div className="flex flex-wrap gap-3 mb-4">
-              {mockup.areas.map((area) => (
-                <Button
-                  key={area.id}
-                  variant={selectedArea[mockup.id] === area.id ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleAreaChange(mockup.id, area.id)}
-                  className="capitalize"
-                >
-                  {area.name}
-                </Button>
-              ))}
-            </div>
-
             {/* Visualization Area */}
             <div className="relative rounded-lg overflow-hidden bg-white border">
               <div className="relative aspect-[4/3] w-full">
@@ -114,42 +75,31 @@ export default function ProductVisualizer({ productImage, productName }: Product
                   onLoad={() => setImageLoaded(true)}
                 />
 
-                {/* Product Texture Overlay */}
-                {imageLoaded && selectedArea[mockup.id] && (
-                  <div
-                    className="absolute z-10"
-                    style={{
-                      top: OVERLAY_POSITIONS[mockup.id as keyof typeof OVERLAY_POSITIONS][
-                        selectedArea[mockup.id] as keyof (typeof OVERLAY_POSITIONS)[keyof typeof OVERLAY_POSITIONS]
-                      ].top,
-                      left: OVERLAY_POSITIONS[mockup.id as keyof typeof OVERLAY_POSITIONS][
-                        selectedArea[mockup.id] as keyof (typeof OVERLAY_POSITIONS)[keyof typeof OVERLAY_POSITIONS]
-                      ].left,
-                      width:
-                        OVERLAY_POSITIONS[mockup.id as keyof typeof OVERLAY_POSITIONS][
-                          selectedArea[mockup.id] as keyof (typeof OVERLAY_POSITIONS)[keyof typeof OVERLAY_POSITIONS]
-                        ].width,
-                      height:
-                        OVERLAY_POSITIONS[mockup.id as keyof typeof OVERLAY_POSITIONS][
-                          selectedArea[mockup.id] as keyof (typeof OVERLAY_POSITIONS)[keyof typeof OVERLAY_POSITIONS]
-                        ].height,
-                      opacity:
-                        OVERLAY_POSITIONS[mockup.id as keyof typeof OVERLAY_POSITIONS][
-                          selectedArea[mockup.id] as keyof (typeof OVERLAY_POSITIONS)[keyof typeof OVERLAY_POSITIONS]
-                        ].opacity,
-                      backgroundImage: `url(${productImage})`,
-                      backgroundRepeat: "repeat",
-                      backgroundSize: "200px 200px",
-                      mixBlendMode: "multiply",
-                    }}
-                  />
-                )}
+                {/* Product Texture Overlays - Apply to both wall and floor */}
+                {imageLoaded &&
+                  OVERLAY_POSITIONS[mockup.id as keyof typeof OVERLAY_POSITIONS].map((overlay) => (
+                    <div
+                      key={overlay.id}
+                      className="absolute z-10"
+                      style={{
+                        top: overlay.top,
+                        left: overlay.left,
+                        width: overlay.width,
+                        height: overlay.height,
+                        opacity: overlay.opacity,
+                        backgroundImage: `url(${productImage})`,
+                        backgroundRepeat: "repeat",
+                        backgroundSize: "200px 200px",
+                        mixBlendMode: "multiply",
+                      }}
+                    />
+                  ))}
               </div>
             </div>
 
             {/* Simple Instruction */}
             <p className="text-sm text-gray-500 mt-4 text-center">
-              This is a simple visualization of how {productName} might look in this space.
+              This is a visualization of how {productName} might look in this space.
             </p>
           </div>
         </div>
