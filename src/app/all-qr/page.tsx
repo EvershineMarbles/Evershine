@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Download, Loader2, Search, Home, Grid, List, Check, LogOut } from "lucide-react"
+import { ArrowLeft, Download, Loader2, Search, Grid, List, Check, LogOut } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -266,13 +266,12 @@ function AllQR() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <h1 className="text-white text-xl font-medium">Evershine Dashboard</h1>
           <div className="flex items-center gap-4">
-          
             <button
               onClick={handleLogout}
               className="flex items-center text-white hover:text-gray-200 transition-colors"
             >
               <LogOut className="h-5 w-5 mr-1" />
-              <span>Logout</span>
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
@@ -296,9 +295,9 @@ function AllQR() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6">
         {/* Header with Search */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <h1 className="text-4xl font-bold text-[#181818]">All Products</h1>
-          <div className="relative w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-[#181818]">All Products</h1>
+          <div className="relative w-full sm:w-auto">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <input
@@ -306,14 +305,14 @@ function AllQR() {
                 placeholder="Search Product..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-3 w-full md:w-[300px] rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#194a95] focus:border-transparent [&::placeholder]:text-black"
+                className="pl-10 pr-4 py-3 w-full sm:w-[250px] md:w-[300px] rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#194a95] focus:border-transparent [&::placeholder]:text-black"
               />
             </div>
           </div>
         </div>
 
         {/* View Toggle and Add Button */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-2 border rounded-lg overflow-hidden">
             <button
               onClick={() => router.push("/products")}
@@ -330,111 +329,124 @@ function AllQR() {
           </div>
           <button
             onClick={() => router.push("/add-product")}
-            className="px-6 py-3 rounded-lg bg-[#194a95] text-white w-full md:w-auto justify-center
+            className="px-6 py-3 rounded-lg bg-[#194a95] text-white w-full sm:w-auto justify-center
                      hover:bg-[#0f3a7a] transition-colors active:transform active:scale-95"
           >
             Add New Product
           </button>
         </div>
+
         {/* Products Count */}
         <p className="text-gray-600 mb-6">
           Showing {filteredProducts.length} of {products.length} products
         </p>
 
-        {/* Products Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b">
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
-                  Product
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 uppercase tracking-wider">
-                  Price
-                </th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredProducts.map((product) => (
-                <tr key={product._id} className="hover:bg-gray-50">
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <Link href={`/single_product/${product.postId}`} className="h-10 w-10 flex-shrink-0 mr-3 block">
-                        <Image
-                          src={product.image[0] || "/placeholder.svg"}
-                          alt={product.name}
-                          width={40}
-                          height={40}
-                          className="rounded-md object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = "/placeholder.svg"
-                          }}
-                        />
-                      </Link>
-                      <div className="ml-2">
-                        <Link
-                          href={`/single_product/${product.postId}`}
-                          className="text-sm font-medium text-gray-900 hover:text-[#194a95] transition-colors cursor-pointer"
+        {/* Products Table - Tablet Responsive */}
+        <div className="overflow-x-auto -mx-4 sm:mx-0">
+          <div className="inline-block min-w-full align-middle">
+            <div className="overflow-hidden border border-gray-200 sm:rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Product
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Price
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredProducts.map((product) => (
+                    <tr key={product._id} className="hover:bg-gray-50">
+                      <td className="px-4 py-4">
+                        <div className="flex items-center">
+                          <Link href={`/product/${product.postId}`} className="h-10 w-10 flex-shrink-0 mr-3 block">
+                            <Image
+                              src={product.image[0] || "/placeholder.svg"}
+                              alt={product.name}
+                              width={40}
+                              height={40}
+                              className="rounded-md object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = "/placeholder.svg"
+                              }}
+                            />
+                          </Link>
+                          <div className="ml-2 min-w-0">
+                            <Link
+                              href={`/product/${product.postId}`}
+                              className="text-sm font-medium text-gray-900 hover:text-[#194a95] transition-colors cursor-pointer truncate block"
+                            >
+                              {product.name}
+                            </Link>
+                            <div className="text-xs text-gray-500">ID: {product.postId.slice(0, 8)}...</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center space-x-2">
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
+                            <input
+                              type="number"
+                              value={priceValues[product.postId] || ""}
+                              onChange={(e) => handlePriceChange(product.postId, e.target.value)}
+                              onKeyDown={(e) => handleKeyDown(e, product.postId)}
+                              className="pl-6 pr-2 py-1 w-20 border rounded focus:outline-none focus:ring-2 focus:ring-[#194a95]"
+                              min="1"
+                              step="any"
+                            />
+                          </div>
+                          <button
+                            onClick={() => updatePrice(product.postId)}
+                            disabled={updatingPrice[product.postId]}
+                            className="p-1 text-green-600 hover:text-green-800"
+                          >
+                            {updatingPrice[product.postId] ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Check className="h-4 w-4" />
+                            )}
+                          </button>
+                          <span className="text-xs text-gray-500 whitespace-nowrap">/sqft</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <Button
+                          onClick={() => generateAndDownloadQR(product)}
+                          size="sm"
+                          disabled={!!generatingQR[product.postId]}
+                          className="bg-[#194a95] hover:bg-[#0f3a7a] whitespace-nowrap"
                         >
-                          {product.name}
-                        </Link>
-                        <div className="text-xs text-gray-500">ID: {product.postId.slice(0, 8)}...</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      <div className="relative">
-                        <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
-                        <input
-                          type="number"
-                          value={priceValues[product.postId] || ""}
-                          onChange={(e) => handlePriceChange(product.postId, e.target.value)}
-                          onKeyDown={(e) => handleKeyDown(e, product.postId)}
-                          className="pl-6 pr-2 py-1 w-24 border rounded focus:outline-none focus:ring-2 focus:ring-[#194a95]"
-                          min="1"
-                          step="any"
-                        />
-                      </div>
-                      <button
-                        onClick={() => updatePrice(product.postId)}
-                        disabled={updatingPrice[product.postId]}
-                        className="p-1 text-green-600 hover:text-green-800"
-                      >
-                        {updatingPrice[product.postId] ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Check className="h-4 w-4" />
-                        )}
-                      </button>
-                      <span className="text-xs text-gray-500">/per sqft</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-right">
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        onClick={() => generateAndDownloadQR(product)}
-                        size="sm"
-                        disabled={!!generatingQR[product.postId]}
-                        className="bg-[#194a95] hover:bg-[#0f3a7a]"
-                      >
-                        {generatingQR[product.postId] ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>
-                            <Download className="h-4 w-4 mr-1" /> Download QR
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                          {generatingQR[product.postId] ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Download className="h-4 w-4 mr-1" />
+                              <span className="hidden sm:inline">Download</span> QR
+                            </>
+                          )}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         {/* Empty State */}
