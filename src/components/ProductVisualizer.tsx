@@ -8,43 +8,37 @@ interface ProductVisualizerProps {
   productName: string
 }
 
-// Define mockup rooms with mask information
+// Define mockup rooms
 const MOCKUPS = [
   {
     id: "bathroom",
     name: "Bathroom",
     src: "/assets/mockups/bathroom.png",
-    description: "Bathroom with marble walls and floor",
   },
   {
     id: "bedroom-green",
     name: "Bedroom",
     src: "/assets/mockups/bedroom-green.png",
-    description: "Bedroom with accent wall",
   },
   {
     id: "living-room",
     name: "Living Room",
     src: "/assets/mockups/living-room.jpeg",
-    description: "Modern living room",
   },
   {
     id: "luxury-living",
     name: "Luxury Living",
     src: "/assets/mockups/luxury-living.png",
-    description: "Luxury living room",
   },
   {
     id: "modern-bedroom",
     name: "Modern Bedroom",
     src: "/assets/mockups/modern-bedroom.png",
-    description: "Contemporary bedroom",
   },
   {
     id: "minimalist",
     name: "Minimalist",
     src: "/assets/mockups/minimalist.png",
-    description: "Minimalist space",
   },
 ]
 
@@ -53,6 +47,8 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const [loading, setLoading] = useState(true)
   const [textureReady, setTextureReady] = useState(false)
   const bookmatchedTextureRef = useRef<string | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const processedMockupsRef = useRef<Record<string, string>>({})
 
   // Create bookmatched texture as soon as component mounts
   useEffect(() => {
@@ -164,6 +160,143 @@ export default function ProductVisualizer({ productImage, productName }: Product
     }
   }
 
+  // Process mockup to replace black bands with texture
+  const processMockup = (mockupId: string) => {
+    if (!textureReady || !bookmatchedTextureRef.current) return null
+
+    // If we already processed this mockup, return the cached result
+    if (processedMockupsRef.current[mockupId]) {
+      return processedMockupsRef.current[mockupId]
+    }
+
+    const mockup = MOCKUPS.find((m) => m.id === mockupId)
+    if (!mockup) return null
+
+    return new Promise<string>((resolve) => {
+      const mockupImg = document.createElement("img")
+      mockupImg.crossOrigin = "anonymous"
+
+      mockupImg.onload = () => {
+        const canvas = document.createElement("canvas")
+        const ctx = canvas.getContext("2d", { willReadFrequently: true })
+
+        if (!ctx) {
+          console.error("Could not get canvas context")
+          resolve(mockup.src)
+          return
+        }
+
+        // Set canvas dimensions to match the mockup image
+        canvas.width = mockupImg.width
+        canvas.height = mockupImg.height
+
+        // Draw the mockup image
+        ctx.drawImage(mockupImg, 0, 0)
+
+        // Get image data to analyze pixels
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const data = imageData.data
+
+        // Load the texture image
+        const textureImg = document.createElement("img")
+        textureImg.crossOrigin = "anonymous"
+
+        textureImg.onload = () => {
+          // Create a pattern from the texture
+          const patternCanvas = document.createElement("canvas")
+          const patternCtx = patternCanvas.getContext("2d")
+
+          if (!patternCtx) {
+            console.error("Could not get pattern canvas context")
+            resolve(mockup.src)
+            return
+          }
+
+          patternCanvas.width = textureImg.width
+          patternCanvas.height = textureImg.height
+          patternCtx.drawImage(textureImg, 0, 0)
+
+          // Find and replace black bands
+          // We'll look for very dark pixels (black or near black)
+          for (let y = 0; y < canvas.height; y++) {
+            for (let x = 0; x < canvas.width; x++) {
+              const idx = (y * canvas.width + x) * 4
+
+              // Check if pixel is very dark (black or near black)
+              // R, G, B values all below 30 (out of 255) indicates a very dark pixel
+              if (data[idx] < 30 && data[idx + 1] < 30 && data[idx + 2] < 30) {
+                // This is a dark pixel - replace it with texture
+                // Get corresponding pixel from texture (with wrapping)
+                const textureX = x % textureImg.width
+                const textureY = y % textureImg.height
+
+                const textureData = patternCtx.getImageData(textureX, textureY, 1, 1).data
+
+                // Replace the dark pixel with texture pixel
+                data[idx] = textureData[0] // R
+                data[idx + 1] = textureData[1] // G
+                data[idx + 2] = textureData[2] // B
+                // Keep original alpha
+              }
+            }
+          }
+
+          // Put the modified image data back
+          ctx.putImageData(imageData, 0, 0)
+
+          // Store the processed mockup
+          const processedMockup = canvas.toDataURL("image/jpeg", 0.9)
+          processedMockupsRef.current[mockupId] = processedMockup
+
+          resolve(processedMockup)
+        }
+
+        textureImg.onerror = () => {
+          console.error("Error loading texture for mockup processing")
+          resolve(mockup.src)
+        }
+
+        textureImg.src = bookmatchedTextureRef.current || productImage
+      }
+
+      mockupImg.onerror = () => {
+        console.error("Error loading mockup image for processing")
+        resolve(mockup.src)
+      }
+
+      mockupImg.src = mockup.src
+    })
+  }
+
+  // Process mockup when tab changes or texture is ready
+  useEffect(() => {
+    if (!textureReady || !bookmatchedTextureRef.current || loading) return
+
+    const processMockupImage = async () => {
+      const processedMockup = await processMockup(activeTab)
+      if (processedMockup && canvasRef.current) {
+        const img = document.createElement("img")
+        img.crossOrigin = "anonymous"
+
+        img.onload = () => {
+          const canvas = canvasRef.current
+          if (!canvas) return
+
+          const ctx = canvas.getContext("2d")
+          if (!ctx) return
+
+          canvas.width = img.width
+          canvas.height = img.height
+          ctx.drawImage(img, 0, 0)
+        }
+
+        img.src = processedMockup
+      }
+    }
+
+    processMockupImage()
+  }, [activeTab, textureReady, loading, productImage])
+
   return (
     <div className="w-full max-w-3xl mx-auto">
       <h2 className="text-xl font-bold mb-4">Product Visualizer</h2>
@@ -187,25 +320,9 @@ export default function ProductVisualizer({ productImage, productName }: Product
                   </div>
                 ) : (
                   <div className="flex justify-center">
-                    {/* This is the key part - we're using a div with a background image */}
-                    <div
-                      className="relative inline-block max-w-full"
-                      style={{
-                        backgroundImage: `url(${bookmatchedTextureRef.current || productImage})`,
-                        backgroundRepeat: "repeat",
-                        backgroundSize: "400px 400px", // Larger size for the bookmatched pattern
-                      }}
-                    >
-                      <img
-                        src={mockup.src || "/placeholder.svg"}
-                        alt={`${mockup.name} mockup with ${productName}`}
-                        className="block"
-                        style={{ maxWidth: "100%", height: "auto", maxHeight: "500px" }}
-                        onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg"
-                        }}
-                      />
-                    </div>
+                    {activeTab === mockup.id && (
+                      <canvas ref={canvasRef} className="max-w-full h-auto" style={{ maxHeight: "500px" }} />
+                    )}
                   </div>
                 )}
               </div>
@@ -217,13 +334,6 @@ export default function ProductVisualizer({ productImage, productName }: Product
           </TabsContent>
         ))}
       </Tabs>
-
-      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-        <p className="text-xs text-yellow-800">
-          <strong>Note:</strong> Some mockup images contain intentional design elements like black accent walls or
-          panels. These are part of the room design and will appear in the visualization.
-        </p>
-      </div>
     </div>
   )
 }
