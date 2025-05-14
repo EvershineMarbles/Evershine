@@ -494,7 +494,7 @@ function ProductDetail() {
                 <h1 className="text-3xl font-bold mt-1">{product.name}</h1>
               </div>
 
-              {/* Price */}
+              {/* Pric */}
               <div className="pb-4 border-b border-gray-200">
                 <p className="text-gray-500">Price (per sqft)</p>
                 <p className="text-xl font-bold mt-1">₹{product.price}/per sqft</p>

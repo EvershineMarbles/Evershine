@@ -236,7 +236,6 @@ export default function ProductVisualizer({ productImage, productName }: Product
                         backgroundRepeat: "repeat",
                         backgroundSize: backgroundSize,
                         backgroundPosition: backgroundPosition,
-                        imageRendering: "auto", // Changed from "high-quality" to "auto"
                       }}
                     >
                       <img
