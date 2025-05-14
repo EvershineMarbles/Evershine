@@ -46,7 +46,6 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const [loading, setLoading] = useState(true)
   const [textureReady, setTextureReady] = useState(false)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const bookmatchedTextureRef = useRef<string | null>(null)
 
   // Create bookmatched texture as soon as component mounts
@@ -85,37 +84,60 @@ export default function ProductVisualizer({ productImage, productName }: Product
         return
       }
 
+      // First, create a clean version of the image without any transparent areas
+      const cleanCanvas = document.createElement("canvas")
+      const cleanCtx = cleanCanvas.getContext("2d")
+
+      if (!cleanCtx) {
+        console.error("Could not get clean canvas context")
+        return
+      }
+
+      // Set clean canvas to the image size
+      cleanCanvas.width = img.width
+      cleanCanvas.height = img.height
+
+      // Fill with white background first to eliminate any transparency
+      cleanCtx.fillStyle = "#FFFFFF"
+      cleanCtx.fillRect(0, 0, cleanCanvas.width, cleanCanvas.height)
+
+      // Draw the image on top of the white background
+      cleanCtx.drawImage(img, 0, 0, img.width, img.height)
+
+      // Get the clean image data
+      const cleanImg = cleanCanvas
+
       // Set canvas size to 2x the image size to fit the bookmatched pattern
-      const patternSize = Math.max(img.width, img.height) * 2
+      const patternSize = Math.max(cleanImg.width, cleanImg.height) * 2
       canvas.width = patternSize
       canvas.height = patternSize
 
       // Draw the original image in the top-left quadrant
-      ctx.drawImage(img, 0, 0, img.width, img.height)
+      ctx.drawImage(cleanImg, 0, 0, cleanImg.width, cleanImg.height)
 
       // Draw horizontally flipped image in top-right quadrant
       ctx.save()
-      ctx.translate(patternSize, 0)
+      ctx.translate(cleanImg.width * 2, 0)
       ctx.scale(-1, 1)
-      ctx.drawImage(img, 0, 0, img.width, img.height)
+      ctx.drawImage(cleanImg, 0, 0, cleanImg.width, cleanImg.height)
       ctx.restore()
 
       // Draw vertically flipped image in bottom-left quadrant
       ctx.save()
-      ctx.translate(0, patternSize)
+      ctx.translate(0, cleanImg.height * 2)
       ctx.scale(1, -1)
-      ctx.drawImage(img, 0, 0, img.width, img.height)
+      ctx.drawImage(cleanImg, 0, 0, cleanImg.width, cleanImg.height)
       ctx.restore()
 
       // Draw both horizontally and vertically flipped image in bottom-right quadrant
       ctx.save()
-      ctx.translate(patternSize, patternSize)
+      ctx.translate(cleanImg.width * 2, cleanImg.height * 2)
       ctx.scale(-1, -1)
-      ctx.drawImage(img, 0, 0, img.width, img.height)
+      ctx.drawImage(cleanImg, 0, 0, cleanImg.width, cleanImg.height)
       ctx.restore()
 
       // Store the bookmatched texture
-      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg")
+      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.9)
       setTextureReady(true)
     }
 
