@@ -53,9 +53,8 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const [mockupsLoaded, setMockupsLoaded] = useState<Record<string, boolean>>({})
   const [allMockupsLoaded, setAllMockupsLoaded] = useState(false)
 
-  // Add this at the beginning of the component, after the state declarations
+  // Preload all mockup images immediately
   useEffect(() => {
-    // Preload all mockup images immediately
     const preloadedMockups: Record<string, boolean> = {}
     let loadedCount = 0
 
@@ -106,12 +105,12 @@ export default function ProductVisualizer({ productImage, productName }: Product
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false)
-    }, 500) // Reduced from 1000ms to 500ms for faster initial display
+    }, 500)
 
     return () => clearTimeout(timer)
   }, [])
 
-  // Replace the entire createBookmatchedTexture function with this improved version
+  // Create a bookmatched texture from the product image
   const createBookmatchedTexture = (imageUrl: string) => {
     // If we already created the texture, don't recreate it
     if (bookmatchedTextureRef.current) {
@@ -140,38 +139,44 @@ export default function ProductVisualizer({ productImage, productName }: Product
       console.log(`Image dimensions: ${originalWidth}x${originalHeight}, Is square: ${isSquareImage}`)
 
       if (isSquareImage) {
-        // For square images (like 646×646px, 488×488px), use a 2x2 grid with precise mirroring
-        // This creates a perfect bookmatched pattern without blurring
-
-        // Make the canvas 2x the size in each dimension
-        canvas.width = originalWidth * 2
-        canvas.height = originalHeight * 2
-
-        // Draw the original image in the top-left
-        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
-
-        // Draw horizontally flipped copy in top-right
-        ctx.save()
-        ctx.translate(canvas.width, 0)
-        ctx.scale(-1, 1)
-        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
-        ctx.restore()
-
-        // Draw vertically flipped copy in bottom-left
-        ctx.save()
-        ctx.translate(0, canvas.height)
-        ctx.scale(1, -1)
-        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
-        ctx.restore()
-
-        // Draw both horizontally and vertically flipped copy in bottom-right
-        ctx.save()
-        ctx.translate(canvas.width, canvas.height)
-        ctx.scale(-1, -1)
-        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
-        ctx.restore()
-
-        // Set background size to exactly match the 2x2 grid
+        // For square images (like 646×646px), use a 4x4 grid with precise mirroring
+        // This creates a more detailed bookmatched pattern without blurring
+        
+        // Make the canvas 4x the size in each dimension for more detail
+        const multiplier = 4
+        canvas.width = originalWidth * multiplier
+        canvas.height = originalHeight * multiplier
+        
+        // Create a pattern of 4x4 tiles with alternating flips
+        for (let y = 0; y < multiplier; y++) {
+          for (let x = 0; x < multiplier; x++) {
+            // Create a more complex pattern with alternating flips
+            // This creates a more natural stone-like appearance
+            const flipX = x % 2 === 1
+            const flipY = y % 2 === 1
+            
+            ctx.save()
+            
+            // Position for this tile
+            const posX = x * originalWidth
+            const posY = y * originalHeight
+            
+            // Apply transformations based on position
+            ctx.translate(
+              posX + (flipX ? originalWidth : 0),
+              posY + (flipY ? originalHeight : 0)
+            )
+            ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1)
+            
+            // Draw the image
+            ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+            
+            ctx.restore()
+          }
+        }
+        
+        // Set background size to create a more detailed pattern
+        // For square images, we want to show more of the pattern
         setBackgroundSize(`${originalWidth * 2}px ${originalHeight * 2}px`)
         setBackgroundPosition("center")
       } else {
@@ -225,8 +230,8 @@ export default function ProductVisualizer({ productImage, productName }: Product
         setBackgroundPosition("center")
       }
 
-      // Store the bookmatched texture
-      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 1.0) // Use highest quality for JPEG
+      // Store the bookmatched texture with maximum quality
+      bookmatchedTextureRef.current = canvas.toDataURL("image/png") // Use PNG for maximum quality
       setTextureReady(true)
     }
 
