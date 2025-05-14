@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import Image from "next/image"
+import { useState, useEffect, useRef } from "react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
 interface ProductVisualizerProps {
@@ -18,7 +17,7 @@ const MOCKUPS = [
   },
   {
     id: "bedroom-green",
-    name: "Bedroom (Green)",
+    name: "Bedroom",
     src: "/assets/mockups/bedroom-green.png",
   },
   {
@@ -43,11 +42,10 @@ const MOCKUPS = [
   },
 ]
 
-
-
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const [loading, setLoading] = useState(true)
+  const imageRefs = useRef<Record<string, HTMLImageElement | null>>({})
 
   useEffect(() => {
     // Set a timeout to simulate loading and ensure the DOM is ready
@@ -57,6 +55,11 @@ export default function ProductVisualizer({ productImage, productName }: Product
 
     return () => clearTimeout(timer)
   }, [])
+
+  // Properly typed ref callback function
+  const setImageRef = (id: string) => (el: HTMLImageElement | null) => {
+    imageRefs.current[id] = el
+  }
 
   return (
     <div className="w-full">
@@ -82,24 +85,22 @@ export default function ProductVisualizer({ productImage, productName }: Product
                 ) : (
                   <div className="flex justify-center">
                     <div
-                      className="relative"
+                      className="relative inline-block" // Changed to inline-block to respect image dimensions
                       style={{
-                        aspectRatio: "1920/2651",
-                        width: "100%",
-                        maxWidth: "400px", // Limit the maximum width
-                        maxHeight: "550px", // Limit the maximum height
                         backgroundImage: `url(${productImage})`,
                         backgroundRepeat: "repeat",
                         backgroundSize: "200px 200px",
                       }}
                     >
-                      {/* Mockup image with transparent areas */}
-                      <Image
+                      <img
+                        ref={setImageRef(mockup.id)}
                         src={mockup.src || "/placeholder.svg"}
                         alt={`${mockup.name} mockup with ${productName}`}
-                        fill
-                        className="object-contain"
-                        style={{ objectFit: "contain" }}
+                        className="block" // Using block to avoid extra space
+                        style={{ maxWidth: "100%" }} // Only constrain width, not height
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg"
+                        }}
                       />
                     </div>
                   </div>
