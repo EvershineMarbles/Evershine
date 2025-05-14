@@ -52,6 +52,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const bookmatchedTextureRef = useRef<string | null>(null)
   const [backgroundSize, setBackgroundSize] = useState("400px 400px") // Default size
+  const [backgroundPosition, setBackgroundPosition] = useState("center") // Default position
 
   // Create bookmatched texture as soon as component mounts
   useEffect(() => {
@@ -97,53 +98,56 @@ export default function ProductVisualizer({ productImage, productName }: Product
 
       if (isSmallImage) {
         // ENHANCED METHOD FOR SMALL IMAGES
-        // Calculate how many times we need to repeat the pattern to reach minimum dimensions
-        const repeatX = Math.max(2, Math.ceil(1500 / (originalWidth * 2)))
-        const repeatY = Math.max(2, Math.ceil(1500 / (originalHeight * 2)))
+        // Instead of scaling up too much, we'll create a more detailed pattern
+        // with more repetitions but at a smaller scale to maintain quality
 
-        // Set canvas size to accommodate the repeated pattern
-        const patternWidth = originalWidth * repeatX
-        const patternHeight = originalHeight * repeatY
+        // For small images, we'll create a 4x4 grid of bookmatched patterns
+        // This gives us more coverage without excessive scaling
+        const gridSize = 4 // 4x4 grid
 
-        canvas.width = patternWidth
-        canvas.height = patternHeight
+        // Set canvas size to accommodate the grid
+        canvas.width = originalWidth * gridSize
+        canvas.height = originalHeight * gridSize
 
-        // Function to draw the image with flipping options
-        const drawImage = (x: number, y: number, flipX: boolean, flipY: boolean) => {
+        // Function to draw a single bookmatched pattern (2x2) at a specific position
+        const drawBookmatchedPattern = (startX: number, startY: number) => {
+          // Original image in top-left
+          ctx.drawImage(img, startX, startY, originalWidth, originalHeight)
+
+          // Horizontally flipped in top-right
           ctx.save()
-          ctx.translate(x, y)
-          if (flipX) {
-            ctx.translate(originalWidth, 0)
-            ctx.scale(-1, 1)
-          }
-          if (flipY) {
-            ctx.translate(0, originalHeight)
-            ctx.scale(1, -1)
-          }
+          ctx.translate(startX + originalWidth * 2, startY)
+          ctx.scale(-1, 1)
+          ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+          ctx.restore()
+
+          // Vertically flipped in bottom-left
+          ctx.save()
+          ctx.translate(startX, startY + originalHeight * 2)
+          ctx.scale(1, -1)
+          ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+          ctx.restore()
+
+          // Both horizontally and vertically flipped in bottom-right
+          ctx.save()
+          ctx.translate(startX + originalWidth * 2, startY + originalHeight * 2)
+          ctx.scale(-1, -1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
         }
 
-        // Create the bookmatched pattern by repeating in a grid
-        for (let y = 0; y < repeatY; y += 2) {
-          for (let x = 0; x < repeatX; x += 2) {
-            // Original image in top-left
-            drawImage(x * originalWidth, y * originalHeight, false, false)
-
-            // Horizontally flipped in top-right
-            drawImage((x + 1) * originalWidth, y * originalHeight, true, false)
-
-            // Vertically flipped in bottom-left
-            drawImage(x * originalWidth, (y + 1) * originalHeight, false, true)
-
-            // Both horizontally and vertically flipped in bottom-right
-            drawImage((x + 1) * originalWidth, (y + 1) * originalHeight, true, true)
+        // Draw multiple bookmatched patterns in a grid
+        for (let y = 0; y < gridSize; y += 2) {
+          for (let x = 0; x < gridSize; x += 2) {
+            drawBookmatchedPattern(x * originalWidth, y * originalHeight)
           }
         }
 
-        // Calculate appropriate background size for CSS
-        const bgSize = Math.max(400, Math.min(originalWidth, originalHeight) * 2)
-        setBackgroundSize(`${bgSize}px ${bgSize}px`)
+        // Set a smaller background size to maintain quality
+        // We'll use a tiling approach rather than scaling
+        const patternSize = Math.min(originalWidth, originalHeight) * 2
+        setBackgroundSize(`${patternSize}px ${patternSize}px`)
+        setBackgroundPosition("center")
       } else {
         // ORIGINAL METHOD FOR ADEQUATELY SIZED IMAGES
         // Set canvas size to 2x the image size to fit the bookmatched pattern
@@ -177,10 +181,11 @@ export default function ProductVisualizer({ productImage, productName }: Product
 
         // Use the original background size for larger images
         setBackgroundSize("400px 400px")
+        setBackgroundPosition("center")
       }
 
       // Store the bookmatched texture
-      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg")
+      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.95) // Higher quality JPEG
       setTextureReady(true)
     }
 
@@ -229,7 +234,9 @@ export default function ProductVisualizer({ productImage, productName }: Product
                       style={{
                         backgroundImage: `url(${bookmatchedTextureRef.current || productImage})`,
                         backgroundRepeat: "repeat",
-                        backgroundSize: backgroundSize, // Dynamic background size
+                        backgroundSize: backgroundSize,
+                        backgroundPosition: backgroundPosition,
+                        imageRendering: "auto", // Changed from "high-quality" to "auto"
                       }}
                     >
                       <img
