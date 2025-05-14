@@ -22,14 +22,14 @@ const MOCKUPS = [
     src: "/assets/mockups/modern-bedroom.png",
   },
   {
-    id: "luxury-living",
-    name: "Luxury Living",
-    src: "/assets/mockups/luxury-living.png",
-  },
-  {
     id: "living-room",
     name: "Living Room",
     src: "/assets/mockups/living-room.jpeg",
+  },
+  {
+    id: "luxury-living",
+    name: "Luxury Living",
+    src: "/assets/mockups/luxury-living.png",
   },
   {
     id: "bedroom-green",
