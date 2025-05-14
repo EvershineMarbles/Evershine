@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 interface ProductVisualizerProps {
   productImage: string
   productName: string
+  preload?: boolean // Optional prop to control preloading behavior
 }
 
 // Define mockup rooms
@@ -16,9 +17,9 @@ const MOCKUPS = [
     src: "/assets/mockups/bathroom.png",
   },
   {
-    id: "bedroom-green",
-    name: "Bedroom",
-    src: "/assets/mockups/bedroom-green.png",
+    id: "modern-bedroom",
+    name: "Modern Bedroom",
+    src: "/assets/mockups/modern-bedroom.png",
   },
   {
     id: "living-room",
@@ -31,9 +32,9 @@ const MOCKUPS = [
     src: "/assets/mockups/luxury-living.png",
   },
   {
-    id: "modern-bedroom",
-    name: "Modern Bedroom",
-    src: "/assets/mockups/modern-bedroom.png",
+    id: "bedroom-green",
+    name: "Bedroom",
+    src: "/assets/mockups/bedroom-green.png",
   },
   {
     id: "minimalist",
@@ -43,7 +44,7 @@ const MOCKUPS = [
 ]
 
 // Minimum dimensions we want to ensure for good coverage
-const MIN_IMAGE_SIZE = 650 // Images smaller than this will use the enhanced method
+const MIN_IMAGE_SIZE = 400 // Images smaller than this will use the enhanced method
 
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
@@ -81,6 +82,9 @@ export default function ProductVisualizer({ productImage, productName }: Product
     img.crossOrigin = "anonymous"
 
     img.onload = () => {
+      // Log image dimensions for debugging
+      console.log(`Product image loaded - Width: ${img.width}, Height: ${img.height}`)
+
       // Create a canvas to manipulate the image
       const canvas = document.createElement("canvas")
       const ctx = canvas.getContext("2d")
@@ -93,17 +97,87 @@ export default function ProductVisualizer({ productImage, productName }: Product
       const originalWidth = img.width
       const originalHeight = img.height
 
-      // Determine if we need to use the enhanced method for small images
+      // Enhanced detection for problematic images
       const isSmallImage = originalWidth < MIN_IMAGE_SIZE || originalHeight < MIN_IMAGE_SIZE
+      const isVerySmallImage = originalWidth < 100 || originalHeight < 100
+      const hasUnbalancedAspectRatio = originalWidth / originalHeight > 3 || originalHeight / originalWidth > 3
+      const isRectangular = Math.abs(originalWidth - originalHeight) > Math.min(originalWidth, originalHeight) * 0.5
 
-      if (isSmallImage) {
-        // ENHANCED METHOD FOR SMALL IMAGES
-        // Instead of scaling up too much, we'll create a more detailed pattern
-        // with more repetitions but at a smaller scale to maintain quality
+      // Determine the approach based on image characteristics
+      if (isVerySmallImage || hasUnbalancedAspectRatio) {
+        console.log("Using super-enhanced method for very small or unbalanced image")
 
-        // For small images, we'll create a 4x4 grid of bookmatched patterns
-        // This gives us more coverage without excessive scaling
-        const gridSize = 4 // 4x4 grid
+        // SUPER-ENHANCED METHOD FOR VERY SMALL OR UNBALANCED IMAGES
+        // Create a normalized square version of the image first
+
+        // Create a temporary square canvas to normalize the image
+        const normalSize = Math.max(originalWidth, originalHeight)
+        const tempCanvas = document.createElement("canvas")
+        tempCanvas.width = normalSize
+        tempCanvas.height = normalSize
+        const tempCtx = tempCanvas.getContext("2d")
+
+        if (tempCtx) {
+          // Center the image in the square canvas
+          const offsetX = (normalSize - originalWidth) / 2
+          const offsetY = (normalSize - originalHeight) / 2
+
+          // Draw the original image centered in the square canvas
+          tempCtx.drawImage(img, offsetX, offsetY, originalWidth, originalHeight)
+
+          // Now create a large grid of bookmatched patterns (6x6)
+          const gridSize = 6
+          canvas.width = normalSize * gridSize
+          canvas.height = normalSize * gridSize
+
+          // Create a 2x2 bookmatched pattern from the normalized image
+          const patternCanvas = document.createElement("canvas")
+          patternCanvas.width = normalSize * 2
+          patternCanvas.height = normalSize * 2
+          const patternCtx = patternCanvas.getContext("2d")
+
+          if (patternCtx) {
+            // Original image in top-left
+            patternCtx.drawImage(tempCanvas, 0, 0)
+
+            // Horizontally flipped in top-right
+            patternCtx.save()
+            patternCtx.translate(normalSize * 2, 0)
+            patternCtx.scale(-1, 1)
+            patternCtx.drawImage(tempCanvas, 0, 0)
+            patternCtx.restore()
+
+            // Vertically flipped in bottom-left
+            patternCtx.save()
+            patternCtx.translate(0, normalSize * 2)
+            patternCtx.scale(1, -1)
+            patternCtx.drawImage(tempCanvas, 0, 0)
+            patternCtx.restore()
+
+            // Both horizontally and vertically flipped in bottom-right
+            patternCtx.save()
+            patternCtx.translate(normalSize * 2, normalSize * 2)
+            patternCtx.scale(-1, -1)
+            patternCtx.drawImage(tempCanvas, 0, 0)
+            patternCtx.restore()
+
+            // Now tile this pattern across the main canvas
+            for (let y = 0; y < canvas.height; y += normalSize * 2) {
+              for (let x = 0; x < canvas.width; x += normalSize * 2) {
+                ctx.drawImage(patternCanvas, x, y)
+              }
+            }
+          }
+
+          // Set a background size that ensures good coverage
+          setBackgroundSize(`${normalSize * 2}px ${normalSize * 2}px`)
+        }
+      } else if (isSmallImage || isRectangular) {
+        console.log("Using enhanced method for small or rectangular image")
+
+        // ENHANCED METHOD FOR SMALL OR RECTANGULAR IMAGES
+        // Create a 4x4 grid of bookmatched patterns
+        const gridSize = 4
 
         // Set canvas size to accommodate the grid
         canvas.width = originalWidth * gridSize
@@ -143,49 +217,50 @@ export default function ProductVisualizer({ productImage, productName }: Product
           }
         }
 
-        // Set a smaller background size to maintain quality
-        // We'll use a tiling approach rather than scaling
+        // Set a background size that ensures good coverage
         const patternSize = Math.min(originalWidth, originalHeight) * 2
         setBackgroundSize(`${patternSize}px ${patternSize}px`)
-        setBackgroundPosition("center")
       } else {
-        // ORIGINAL METHOD FOR ADEQUATELY SIZED IMAGES
+        console.log("Using standard method for normal-sized image")
+
+        // STANDARD METHOD FOR NORMAL-SIZED IMAGES
         // Set canvas size to 2x the image size to fit the bookmatched pattern
-        const patternSize = Math.max(img.width, img.height) * 2
+        const patternSize = Math.max(originalWidth, originalHeight) * 2
         canvas.width = patternSize
         canvas.height = patternSize
 
         // Draw the original image in the top-left quadrant
-        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.drawImage(img, 0, 0)
 
         // Draw horizontally flipped image in top-right quadrant
         ctx.save()
         ctx.translate(patternSize, 0)
         ctx.scale(-1, 1)
-        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
         ctx.restore()
 
         // Draw vertically flipped image in bottom-left quadrant
         ctx.save()
         ctx.translate(0, patternSize)
         ctx.scale(1, -1)
-        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
         ctx.restore()
 
         // Draw both horizontally and vertically flipped image in bottom-right quadrant
         ctx.save()
         ctx.translate(patternSize, patternSize)
         ctx.scale(-1, -1)
-        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
         ctx.restore()
 
-        // Use the original background size for larger images
-        setBackgroundSize("400px 400px")
-        setBackgroundPosition("center")
+        // Use a background size that ensures the pattern is visible but not too small
+        setBackgroundSize(`${patternSize / 2}px ${patternSize / 2}px`)
       }
 
-      // Store the bookmatched texture
-      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.95) // Higher quality JPEG
+      setBackgroundPosition("center")
+
+      // Store the bookmatched texture with high quality
+      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.98)
       setTextureReady(true)
     }
 
@@ -236,15 +311,22 @@ export default function ProductVisualizer({ productImage, productName }: Product
                         backgroundRepeat: "repeat",
                         backgroundSize: backgroundSize,
                         backgroundPosition: backgroundPosition,
+                        imageRendering: "auto", // Changed from "high-quality" to "auto"
                       }}
                     >
                       <img
-                        src={mockup.src || "/placeholder.svg"}
+                        src={
+                          mockup.src ||
+                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E" ||
+                          "/placeholder.svg" ||
+                          "/placeholder.svg"
+                        }
                         alt={`${mockup.name} mockup with ${productName}`}
                         className="block"
                         style={{ maxWidth: "100%", height: "auto", maxHeight: "500px" }}
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg"
+                          e.currentTarget.src =
+                            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' strokeWidth='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
                         }}
                       />
                     </div>
