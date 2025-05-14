@@ -47,8 +47,8 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const [loading, setLoading] = useState(true)
   const [textureReady, setTextureReady] = useState(false)
   const bookmatchedTextureRef = useRef<string | null>(null)
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const processedMockupsRef = useRef<Record<string, string>>({})
+  const mockupCanvasRef = useRef<HTMLCanvasElement>(null)
+  const [mockupDimensions, setMockupDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
 
   // Create bookmatched texture as soon as component mounts
   useEffect(() => {
@@ -139,7 +139,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
       ctx.restore()
 
       // Store the bookmatched texture
-      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.9)
+      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.95)
       setTextureReady(true)
     }
 
@@ -160,142 +160,102 @@ export default function ProductVisualizer({ productImage, productName }: Product
     }
   }
 
-  // Process mockup to replace black bands with texture
-  const processMockup = (mockupId: string) => {
-    if (!textureReady || !bookmatchedTextureRef.current) return null
+  // Load mockup image and prepare canvas when tab changes
+  useEffect(() => {
+    if (!textureReady || loading) return
 
-    // If we already processed this mockup, return the cached result
-    if (processedMockupsRef.current[mockupId]) {
-      return processedMockupsRef.current[mockupId]
-    }
+    const mockup = MOCKUPS.find((m) => m.id === activeTab)
+    if (!mockup) return
 
-    const mockup = MOCKUPS.find((m) => m.id === mockupId)
-    if (!mockup) return null
-
-    return new Promise<string>((resolve) => {
+    const loadMockup = () => {
       const mockupImg = document.createElement("img")
       mockupImg.crossOrigin = "anonymous"
 
       mockupImg.onload = () => {
-        const canvas = document.createElement("canvas")
-        const ctx = canvas.getContext("2d", { willReadFrequently: true })
+        setMockupDimensions({
+          width: mockupImg.width,
+          height: mockupImg.height,
+        })
 
-        if (!ctx) {
-          console.error("Could not get canvas context")
-          resolve(mockup.src)
-          return
-        }
-
-        // Set canvas dimensions to match the mockup image
-        canvas.width = mockupImg.width
-        canvas.height = mockupImg.height
-
-        // Draw the mockup image
-        ctx.drawImage(mockupImg, 0, 0)
-
-        // Get image data to analyze pixels
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-        const data = imageData.data
-
-        // Load the texture image
-        const textureImg = document.createElement("img")
-        textureImg.crossOrigin = "anonymous"
-
-        textureImg.onload = () => {
-          // Create a pattern from the texture
-          const patternCanvas = document.createElement("canvas")
-          const patternCtx = patternCanvas.getContext("2d")
-
-          if (!patternCtx) {
-            console.error("Could not get pattern canvas context")
-            resolve(mockup.src)
-            return
-          }
-
-          patternCanvas.width = textureImg.width
-          patternCanvas.height = textureImg.height
-          patternCtx.drawImage(textureImg, 0, 0)
-
-          // Find and replace black bands
-          // We'll look for very dark pixels (black or near black)
-          for (let y = 0; y < canvas.height; y++) {
-            for (let x = 0; x < canvas.width; x++) {
-              const idx = (y * canvas.width + x) * 4
-
-              // Check if pixel is very dark (black or near black)
-              // R, G, B values all below 30 (out of 255) indicates a very dark pixel
-              if (data[idx] < 30 && data[idx + 1] < 30 && data[idx + 2] < 30) {
-                // This is a dark pixel - replace it with texture
-                // Get corresponding pixel from texture (with wrapping)
-                const textureX = x % textureImg.width
-                const textureY = y % textureImg.height
-
-                const textureData = patternCtx.getImageData(textureX, textureY, 1, 1).data
-
-                // Replace the dark pixel with texture pixel
-                data[idx] = textureData[0] // R
-                data[idx + 1] = textureData[1] // G
-                data[idx + 2] = textureData[2] // B
-                // Keep original alpha
-              }
-            }
-          }
-
-          // Put the modified image data back
-          ctx.putImageData(imageData, 0, 0)
-
-          // Store the processed mockup
-          const processedMockup = canvas.toDataURL("image/jpeg", 0.9)
-          processedMockupsRef.current[mockupId] = processedMockup
-
-          resolve(processedMockup)
-        }
-
-        textureImg.onerror = () => {
-          console.error("Error loading texture for mockup processing")
-          resolve(mockup.src)
-        }
-
-        textureImg.src = bookmatchedTextureRef.current || productImage
+        // Draw on canvas in the next render cycle
+        setTimeout(() => {
+          renderVisualization(mockupImg)
+        }, 0)
       }
 
-      mockupImg.onerror = () => {
-        console.error("Error loading mockup image for processing")
-        resolve(mockup.src)
+      mockupImg.onerror = (e) => {
+        console.error("Error loading mockup image:", e)
       }
 
       mockupImg.src = mockup.src
-    })
-  }
-
-  // Process mockup when tab changes or texture is ready
-  useEffect(() => {
-    if (!textureReady || !bookmatchedTextureRef.current || loading) return
-
-    const processMockupImage = async () => {
-      const processedMockup = await processMockup(activeTab)
-      if (processedMockup && canvasRef.current) {
-        const img = document.createElement("img")
-        img.crossOrigin = "anonymous"
-
-        img.onload = () => {
-          const canvas = canvasRef.current
-          if (!canvas) return
-
-          const ctx = canvas.getContext("2d")
-          if (!ctx) return
-
-          canvas.width = img.width
-          canvas.height = img.height
-          ctx.drawImage(img, 0, 0)
-        }
-
-        img.src = processedMockup
-      }
     }
 
-    processMockupImage()
-  }, [activeTab, textureReady, loading, productImage])
+    loadMockup()
+  }, [activeTab, textureReady, loading])
+
+  // Render the visualization on canvas
+  const renderVisualization = (mockupImg: HTMLImageElement) => {
+    const canvas = mockupCanvasRef.current
+    if (!canvas || !bookmatchedTextureRef.current) return
+
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    // Set canvas dimensions to match the mockup image
+    canvas.width = mockupImg.width
+    canvas.height = mockupImg.height
+
+    // Create a pattern from the bookmatched texture
+    const textureImg = document.createElement("img")
+    textureImg.crossOrigin = "anonymous"
+
+    textureImg.onload = () => {
+      // First, fill the entire canvas with the texture
+      const pattern = ctx.createPattern(textureImg, "repeat")
+      if (pattern) {
+        ctx.fillStyle = pattern
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+      }
+
+      // Then draw the mockup image on top, but with special handling for black areas
+      // Create a temporary canvas to analyze the mockup
+      const tempCanvas = document.createElement("canvas")
+      const tempCtx = tempCanvas.getContext("2d")
+      if (!tempCtx) return
+
+      tempCanvas.width = mockupImg.width
+      tempCanvas.height = mockupImg.height
+      tempCtx.drawImage(mockupImg, 0, 0)
+
+      // Get image data to analyze pixels
+      const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height)
+      const data = imageData.data
+
+      // Create a mask for non-black areas
+      for (let i = 0; i < data.length; i += 4) {
+        // Check if pixel is very dark (black or near black)
+        // R, G, B values all below 30 (out of 255) indicates a very dark pixel
+        if (data[i] < 30 && data[i + 1] < 30 && data[i + 2] < 30) {
+          // Make this pixel transparent in the mockup
+          data[i + 3] = 0 // Set alpha to 0
+        }
+      }
+
+      // Put the modified image data back
+      tempCtx.putImageData(imageData, 0, 0)
+
+      // Draw the modified mockup (with transparent black areas) on top of the texture
+      ctx.drawImage(tempCanvas, 0, 0)
+    }
+
+    textureImg.onerror = () => {
+      console.error("Error loading texture for visualization")
+      // Fallback to just showing the mockup
+      ctx.drawImage(mockupImg, 0, 0)
+    }
+
+    textureImg.src = bookmatchedTextureRef.current
+  }
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -320,9 +280,13 @@ export default function ProductVisualizer({ productImage, productName }: Product
                   </div>
                 ) : (
                   <div className="flex justify-center">
-                    {activeTab === mockup.id && (
-                      <canvas ref={canvasRef} className="max-w-full h-auto" style={{ maxHeight: "500px" }} />
-                    )}
+                    <canvas
+                      ref={mockupCanvasRef}
+                      width={mockupDimensions.width || 800}
+                      height={mockupDimensions.height || 600}
+                      className="max-w-full h-auto"
+                      style={{ maxHeight: "500px" }}
+                    />
                   </div>
                 )}
               </div>
