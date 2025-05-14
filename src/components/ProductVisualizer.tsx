@@ -42,11 +42,10 @@ const MOCKUPS = [
     src: "/assets/mockups/minimalist.png",
   },
 ]
-
 // Minimum dimensions we want to ensure for good coverage
 const MIN_IMAGE_SIZE = 650 // Images smaller than this will use the enhanced method
 
-export default function ProductVisualizer({ productImage, productName, preload = true }: ProductVisualizerProps) {
+export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const [loading, setLoading] = useState(true)
   const [textureReady, setTextureReady] = useState(false)
@@ -54,49 +53,20 @@ export default function ProductVisualizer({ productImage, productName, preload =
   const bookmatchedTextureRef = useRef<string | null>(null)
   const [backgroundSize, setBackgroundSize] = useState("400px 400px") // Default size
   const [backgroundPosition, setBackgroundPosition] = useState("center") // Default position
-  const [mockupImagesLoaded, setMockupImagesLoaded] = useState<Record<string, boolean>>({})
-
-  // Preload all mockup images
-  useEffect(() => {
-    if (!preload) return
-
-    const preloadImages = async () => {
-      const loadPromises = MOCKUPS.map((mockup) => {
-        return new Promise<void>((resolve) => {
-          const img = new window.Image()
-          img.src = mockup.src
-          img.onload = () => {
-            setMockupImagesLoaded((prev) => ({ ...prev, [mockup.id]: true }))
-            resolve()
-          }
-          img.onerror = () => {
-            console.error(`Failed to preload mockup image: ${mockup.src}`)
-            resolve() // Still resolve to not block other images
-          }
-        })
-      })
-
-      await Promise.all(loadPromises)
-    }
-
-    preloadImages()
-  }, [preload])
 
   // Create bookmatched texture as soon as component mounts
   useEffect(() => {
-    // Start creating the bookmatched texture immediately
     createBookmatchedTexture(productImage)
   }, [productImage])
 
-  // Remove artificial loading delay and rely on actual asset loading
+  // Set a timeout to simulate loading and ensure the DOM is ready
   useEffect(() => {
-    // Check if all necessary assets are loaded
-    const allMockupsLoaded = Object.keys(mockupImagesLoaded).length === MOCKUPS.length
-
-    if (textureReady && allMockupsLoaded) {
+    const timer = setTimeout(() => {
       setLoading(false)
-    }
-  }, [textureReady, mockupImagesLoaded])
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [])
 
   // Create a bookmatched texture from the product image
   const createBookmatchedTexture = (imageUrl: string) => {
@@ -256,18 +226,6 @@ export default function ProductVisualizer({ productImage, productName, preload =
     <div className="w-full max-w-3xl mx-auto">
       <h2 className="text-xl font-bold mb-4">Product Visualizer</h2>
 
-      {/* Hidden preload container for mockup images */}
-      <div className="hidden">
-        {MOCKUPS.map((mockup) => (
-          <img
-            key={`preload-${mockup.id}`}
-            src={mockup.src || "/placeholder.svg"}
-            alt=""
-            onLoad={() => setMockupImagesLoaded((prev) => ({ ...prev, [mockup.id]: true }))}
-          />
-        ))}
-      </div>
-
       <Tabs defaultValue={MOCKUPS[0].id} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-4">
           {MOCKUPS.map((mockup) => (
@@ -294,7 +252,7 @@ export default function ProductVisualizer({ productImage, productName, preload =
                         backgroundRepeat: "repeat",
                         backgroundSize: backgroundSize,
                         backgroundPosition: backgroundPosition,
-                        imageRendering: "auto",
+                        imageRendering: "auto", // Changed from "high-quality" to "auto"
                       }}
                     >
                       <img
