@@ -47,6 +47,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const [loading, setLoading] = useState(true)
   const [textureReady, setTextureReady] = useState(false)
   const bookmatchedTextureRef = useRef<string | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   // Create bookmatched texture as soon as component mounts
   useEffect(() => {
@@ -158,6 +159,64 @@ export default function ProductVisualizer({ productImage, productName }: Product
     }
   }
 
+  // Function to render the visualization directly on canvas
+  const renderVisualization = (mockupId: string) => {
+    if (!textureReady || !bookmatchedTextureRef.current) return null
+
+    const mockup = MOCKUPS.find((m) => m.id === mockupId)
+    if (!mockup) return null
+
+    return (
+      <div className="flex justify-center">
+        <canvas ref={canvasRef} className="max-w-full h-auto" style={{ maxHeight: "500px" }} />
+      </div>
+    )
+  }
+
+  // Use canvas to apply texture to mockup when tab changes or texture is ready
+  useEffect(() => {
+    if (!textureReady || !bookmatchedTextureRef.current || loading) return
+
+    const mockup = MOCKUPS.find((m) => m.id === activeTab)
+    if (!mockup) return
+
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    // Load the mockup image
+    const mockupImg = document.createElement("img")
+    mockupImg.crossOrigin = "anonymous"
+
+    mockupImg.onload = () => {
+      // Set canvas dimensions to match the mockup image
+      canvas.width = mockupImg.width
+      canvas.height = mockupImg.height
+
+      // Create a pattern from the bookmatched texture
+      const textureImg = document.createElement("img")
+      textureImg.crossOrigin = "anonymous"
+
+      textureImg.onload = () => {
+        const pattern = ctx.createPattern(textureImg, "repeat")
+        if (!pattern) return
+
+        // Fill the canvas with the pattern first
+        ctx.fillStyle = pattern
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+        // Now draw the mockup image on top
+        ctx.drawImage(mockupImg, 0, 0, canvas.width, canvas.height)
+      }
+
+      textureImg.src = bookmatchedTextureRef.current || productImage
+    }
+
+    mockupImg.src = mockup.src
+  }, [activeTab, textureReady, loading, productImage])
+
   return (
     <div className="w-full max-w-3xl mx-auto">
       <h2 className="text-xl font-bold mb-4">Product Visualizer</h2>
@@ -181,24 +240,9 @@ export default function ProductVisualizer({ productImage, productName }: Product
                   </div>
                 ) : (
                   <div className="flex justify-center">
-                    <div
-                      className="relative inline-block max-w-full"
-                      style={{
-                        backgroundImage: `url(${bookmatchedTextureRef.current || productImage})`,
-                        backgroundRepeat: "repeat",
-                        backgroundSize: "400px 400px", // Larger size for the bookmatched pattern
-                      }}
-                    >
-                      <img
-                        src={mockup.src || "/placeholder.svg"}
-                        alt={`${mockup.name} mockup with ${productName}`}
-                        className="block"
-                        style={{ maxWidth: "100%", height: "auto", maxHeight: "500px" }}
-                        onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg"
-                        }}
-                      />
-                    </div>
+                    {activeTab === mockup.id && (
+                      <canvas ref={canvasRef} className="max-w-full h-auto" style={{ maxHeight: "500px" }} />
+                    )}
                   </div>
                 )}
               </div>
