@@ -16,9 +16,9 @@ const MOCKUPS = [
     src: "/assets/mockups/bathroom.png",
   },
   {
-    id: "bedroom-green",
-    name: "Bedroom",
-    src: "/assets/mockups/bedroom-green.png",
+    id: "modern-bedroom",
+    name: "Modern Bedroom",
+    src: "/assets/mockups/modern-bedroom.png",
   },
   {
     id: "living-room",
@@ -26,14 +26,14 @@ const MOCKUPS = [
     src: "/assets/mockups/living-room.jpeg",
   },
   {
+    id: "bedroom-green",
+    name: "Bedroom",
+    src: "/assets/mockups/bedroom-green.png",
+  },
+  {
     id: "luxury-living",
     name: "Luxury Living",
     src: "/assets/mockups/luxury-living.png",
-  },
-  {
-    id: "modern-bedroom",
-    name: "Modern Bedroom",
-    src: "/assets/mockups/modern-bedroom.png",
   },
   {
     id: "minimalist",
