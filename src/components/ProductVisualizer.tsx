@@ -94,6 +94,25 @@ export default function ProductVisualizer({ productImage, productName }: Product
     // Handle product image error
     productImg.onerror = (e) => {
       console.error("Failed to load product image:", e)
+
+      // If we haven't tried the proxy yet and it's an S3 image, try the proxy
+      if (!productImage.includes("/api/proxy-image") && productImage.includes("amazonaws.com")) {
+        console.log("Trying proxy as fallback for:", productImage)
+        productImg.src = `/api/proxy-image?url=${encodeURIComponent(productImage)}`
+        return // Don't set error state yet, give the proxy a chance
+      }
+
+      // If we're already using the proxy or it's not an S3 image, try a direct URL as last resort
+      if (productImage.includes("/api/proxy-image")) {
+        const originalUrl = new URL(productImage).searchParams.get("url")
+        if (originalUrl && !productImg.src.includes("data:image")) {
+          console.log("Proxy failed, trying direct URL as last resort:", originalUrl)
+          productImg.src = originalUrl
+          return // One last chance
+        }
+      }
+
+      // All attempts failed
       setError("Failed to load product image. Please try again.")
       setLoading(false)
     }
@@ -112,7 +131,14 @@ export default function ProductVisualizer({ productImage, productName }: Product
     }
 
     // Start loading the product image
-    productImg.src = productImage
+    // Always use the proxy for S3 images to avoid CORS issues
+    if (productImage.includes("amazonaws.com")) {
+      const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(productImage)}`
+      console.log("Using proxy for S3 image:", proxyUrl)
+      productImg.src = proxyUrl
+    } else {
+      productImg.src = productImage
+    }
 
     // Cleanup function
     return () => {

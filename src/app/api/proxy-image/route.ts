@@ -4,13 +4,15 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const url = searchParams.get("url")
 
+  console.log("Image proxy request for:", url)
+
   if (!url) {
+    console.error("No URL provided to image proxy")
     // Return a simple SVG placeholder if no URL is provided
     return new NextResponse(
       `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
         <rect width="100" height="100" fill="#f0f0f0"/>
-        <path d="M30 40 L50 65 L70 40" stroke="#cccccc" stroke-width="2" fill="none"/>
-        <circle cx="50" cy="30" r="10" fill="#cccccc"/>
+        <text x="50" y="50" font-family="Arial" font-size="10" text-anchor="middle" fill="#999">No image URL</text>
       </svg>`,
       {
         headers: {
@@ -23,10 +25,14 @@ export async function GET(request: Request) {
   }
 
   try {
+    console.log("Fetching image from:", url)
+
     const response = await fetch(url, {
       headers: {
         Accept: "image/*",
       },
+      // Add a longer timeout for large images
+      signal: AbortSignal.timeout(10000), // 10 second timeout
     })
 
     if (!response.ok) {
@@ -35,8 +41,7 @@ export async function GET(request: Request) {
       return new NextResponse(
         `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
           <rect width="100" height="100" fill="#f0f0f0"/>
-          <path d="M30 40 L50 65 L70 40" stroke="#cccccc" stroke-width="2" fill="none"/>
-          <circle cx="50" cy="30" r="10" fill="#cccccc"/>
+          <text x="50" y="50" font-family="Arial" font-size="10" text-anchor="middle" fill="#999">Error ${response.status}</text>
         </svg>`,
         {
           headers: {
@@ -49,6 +54,7 @@ export async function GET(request: Request) {
     }
 
     const blob = await response.blob()
+    console.log("Image fetched successfully, size:", blob.size, "bytes, type:", blob.type)
 
     // Return the image with appropriate headers
     return new NextResponse(blob, {
@@ -64,8 +70,7 @@ export async function GET(request: Request) {
     return new NextResponse(
       `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
         <rect width="100" height="100" fill="#f0f0f0"/>
-        <path d="M30 40 L50 65 L70 40" stroke="#cccccc" stroke-width="2" fill="none"/>
-        <circle cx="50" cy="30" r="10" fill="#cccccc"/>
+        <text x="50" y="50" font-family="Arial" font-size="10" text-anchor="middle" fill="#999">Proxy error</text>
       </svg>`,
       {
         headers: {
