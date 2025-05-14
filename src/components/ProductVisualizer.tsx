@@ -45,7 +45,7 @@ const MOCKUPS = [
 // Minimum dimensions we want to ensure for good coverage
 const MIN_IMAGE_SIZE = 650 // Images smaller than this will use the enhanced method
 
-export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
+export default function ProductVisualizer({ productImage, productName, preload = true }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const [loading, setLoading] = useState(true)
   const [textureReady, setTextureReady] = useState(false)
@@ -53,22 +53,51 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const bookmatchedTextureRef = useRef<string | null>(null)
   const [backgroundSize, setBackgroundSize] = useState("400px 400px") // Default size
   const [backgroundPosition, setBackgroundPosition] = useState("center") // Default position
+  const [mockupImagesLoaded, setMockupImagesLoaded] = useState<Record<string, boolean>>({})
+
+  // Preload all mockup images
+  useEffect(() => {
+    if (!preload) return
+
+    const preloadImages = async () => {
+      const loadPromises = MOCKUPS.map((mockup) => {
+        return new Promise<void>((resolve) => {
+          const img = new window.Image()
+          img.src = mockup.src
+          img.onload = () => {
+            setMockupImagesLoaded((prev) => ({ ...prev, [mockup.id]: true }))
+            resolve()
+          }
+          img.onerror = () => {
+            console.error(`Failed to preload mockup image: ${mockup.src}`)
+            resolve() // Still resolve to not block other images
+          }
+        })
+      })
+
+      await Promise.all(loadPromises)
+    }
+
+    preloadImages()
+  }, [preload])
 
   // Create bookmatched texture as soon as component mounts
   useEffect(() => {
+    // Start creating the bookmatched texture immediately
     createBookmatchedTexture(productImage)
   }, [productImage])
 
-  // Set a timeout to simulate loading and ensure the DOM is ready
+  // Remove artificial loading delay and rely on actual asset loading
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Check if all necessary assets are loaded
+    const allMockupsLoaded = Object.keys(mockupImagesLoaded).length === MOCKUPS.length
+
+    if (textureReady && allMockupsLoaded) {
       setLoading(false)
-    }, 1000)
+    }
+  }, [textureReady, mockupImagesLoaded])
 
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Create a bookmatched texture from the product image
+  // Update the createBookmatchedTexture function to better handle small images and ensure full coverage
   const createBookmatchedTexture = (imageUrl: string) => {
     // If we already created the texture, don't recreate it
     if (bookmatchedTextureRef.current) {
@@ -161,8 +190,8 @@ export default function ProductVisualizer({ productImage, productName }: Product
           ctx.drawImage(tempCanvas, basePatternSize, basePatternSize)
         }
 
-        // Set a smaller background size to maintain quality
-        setBackgroundSize(`${basePatternSize}px ${basePatternSize}px`)
+        // Set a larger background size to ensure full coverage
+        setBackgroundSize(`${basePatternSize * 1.5}px ${basePatternSize * 1.5}px`)
         setBackgroundPosition("center")
       } else {
         // ORIGINAL METHOD FOR ADEQUATELY SIZED IMAGES
@@ -195,8 +224,8 @@ export default function ProductVisualizer({ productImage, productName }: Product
         ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
         ctx.restore()
 
-        // Use a background size that ensures the pattern is visible but not too small
-        setBackgroundSize(`${patternSize / 2}px ${patternSize / 2}px`)
+        // Use a larger background size to ensure full coverage
+        setBackgroundSize(`${patternSize}px ${patternSize}px`)
         setBackgroundPosition("center")
       }
 
@@ -222,9 +251,22 @@ export default function ProductVisualizer({ productImage, productName }: Product
     }
   }
 
+  // Update the return JSX to improve the texture rendering
   return (
     <div className="w-full max-w-3xl mx-auto">
       <h2 className="text-xl font-bold mb-4">Product Visualizer</h2>
+
+      {/* Hidden preload container for mockup images */}
+      <div className="hidden">
+        {MOCKUPS.map((mockup) => (
+          <img
+            key={`preload-${mockup.id}`}
+            src={mockup.src || "/placeholder.svg"}
+            alt=""
+            onLoad={() => setMockupImagesLoaded((prev) => ({ ...prev, [mockup.id]: true }))}
+          />
+        ))}
+      </div>
 
       <Tabs defaultValue={MOCKUPS[0].id} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-4">
@@ -252,7 +294,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
                         backgroundRepeat: "repeat",
                         backgroundSize: backgroundSize,
                         backgroundPosition: backgroundPosition,
-                        imageRendering: "auto", // Changed from "high-quality" to "auto"
+                        imageRendering: "auto",
                       }}
                     >
                       <img
