@@ -19,7 +19,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { Home } from "lucide-react"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -446,7 +445,6 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
     <div className="max-w-3xl mx-auto bg-white min-h-screen">
       {/* Header */}
 
-     
       <div className="sticky top-0 z-50 bg-white">
         <div className="p-4">
           <button
@@ -752,7 +750,6 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 />
               </div>
             </div>
- 
 
             {/* Image Upload */}
             <div className="form-field">
@@ -774,7 +771,10 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                     {previews.map((preview, index) => (
                       <div key={index} className="relative w-[100px] aspect-square">
                         <Image
-                          src={preview || "/placeholder.svg"}
+                          src={
+                            preview ||
+                            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
+                          }
                           alt={`Preview ${index + 1}`}
                           width={100}
                           height={100}
@@ -880,8 +880,6 @@ export default function ProductForm({ mode = "create", initialData }: ProductFor
                 )}
               />
             </div>
-
-          
 
             {/* Description */}
             <div className="form-field">

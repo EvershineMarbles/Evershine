@@ -3,22 +3,10 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import axios, { AxiosError } from "axios"
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Trash2, ChevronDown, ChevronUp, Calculator, Download } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Calculator } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import QRCodeGenerator from "@/components/QRCodeGenerator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -180,7 +168,6 @@ export default function ProductDetail() {
 
     fetchProduct()
   }, [params.id])
-
 
   const handleThumbnailClick = (index: number) => {
     setCurrentImageIndex(index)
@@ -360,8 +347,9 @@ export default function ProductDetail() {
                 <Image
                   src={
                     imageLoadError[currentImageIndex]
-                      ? "/placeholder.svg"
-                      : product.image[currentImageIndex] || "/placeholder.svg"
+                      ? "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
+                      : product.image[currentImageIndex] ||
+                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
                   }
                   alt={product.name}
                   fill
@@ -404,7 +392,12 @@ export default function ProductDetail() {
                     }`}
                   >
                     <Image
-                      src={imageLoadError[index] ? "/placeholder.svg" : img || "/placeholder.svg"}
+                      src={
+                        imageLoadError[index]
+                          ? "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
+                          : img ||
+                            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
+                      }
                       alt={`${product.name} thumbnail ${index + 1}`}
                       fill
                       className="object-cover"
@@ -424,7 +417,6 @@ export default function ProductDetail() {
               <h1 className="text-3xl font-bold mt-1">{product.name}</h1>
             </div>
 
-        
             {/* Product Category */}
             <div className="pb-4 border-b border-gray-200">
               <p className="text-gray-500">Product Category</p>
@@ -545,22 +537,14 @@ export default function ProductDetail() {
                 )}
               </div>
             </div>
-
-           
-
-           
-            </div>
           </div>
         </div>
+      </div>
 
-    
-        
-        {/* Disclaimer */}
-        <div className="max-w-6xl mx-auto mt-8 pt-4 border-t">
-          <p className="text-gray-500 text-sm italic text-center">
-            Disclaimer: Actual quantity can differ
-          </p>
-        </div>
+      {/* Disclaimer */}
+      <div className="max-w-6xl mx-auto mt-8 pt-4 border-t">
+        <p className="text-gray-500 text-sm italic text-center">Disclaimer: Actual quantity can differ</p>
+      </div>
     </div>
   )
 }

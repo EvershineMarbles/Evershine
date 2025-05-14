@@ -330,15 +330,22 @@ function AllQR() {
                     <tr key={product._id} className="hover:bg-gray-50">
                       <td className="px-4 py-4">
                         <div className="flex items-center">
-                          <Link href={`/single_product/${product.postId}`} className="h-10 w-10 flex-shrink-0 mr-3 block">
+                          <Link
+                            href={`/single_product/${product.postId}`}
+                            className="h-10 w-10 flex-shrink-0 mr-3 block"
+                          >
                             <Image
-                              src={product.image[0] || "/placeholder.svg"}
+                              src={
+                                product.image[0] ||
+                                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23f0f0f0'/%3E%3Cpath d='M12 16 L20 26 L28 16' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='20' cy='12' r='4' fill='%23cccccc'/%3E%3C/svg%3E"
+                              }
                               alt={product.name}
                               width={40}
                               height={40}
                               className="rounded-md object-cover"
                               onError={(e) => {
-                                e.currentTarget.src = "/placeholder.svg"
+                                e.currentTarget.src =
+                                  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23f0f0f0'/%3E%3Cpath d='M12 16 L20 26 L28 16' stroke='%23cccccc' strokeWidth='2' fill='none'/%3E%3Ccircle cx='20' cy='12' r='4' fill='%23cccccc'/%3E%3C/svg%3E"
                               }}
                             />
                           </Link>

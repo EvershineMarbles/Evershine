@@ -43,7 +43,6 @@ const MOCKUPS = [
   },
 ]
 
-
 // Minimum dimensions we want to ensure for good coverage
 const MIN_IMAGE_SIZE = 650 // Images smaller than this will use the enhanced method
 
@@ -258,12 +257,16 @@ export default function ProductVisualizer({ productImage, productName }: Product
                       }}
                     >
                       <img
-                        src={mockup.src || "/placeholder.svg"}
+                        src={
+                          mockup.src ||
+                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
+                        }
                         alt={`${mockup.name} mockup with ${productName}`}
                         className="block"
                         style={{ maxWidth: "100%", height: "auto", maxHeight: "500px" }}
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg"
+                          e.currentTarget.src =
+                            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' strokeWidth='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
                         }}
                       />
                     </div>
