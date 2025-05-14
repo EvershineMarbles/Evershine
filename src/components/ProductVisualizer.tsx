@@ -98,94 +98,110 @@ export default function ProductVisualizer({ productImage, productName }: Product
 
       if (isSmallImage) {
         // ENHANCED METHOD FOR SMALL IMAGES
-        // Instead of scaling up too much, we'll create a more detailed pattern
-        // with more repetitions but at a smaller scale to maintain quality
+        // Create a larger, more detailed bookmatched pattern
 
-        // For small images, we'll create a 4x4 grid of bookmatched patterns
-        // This gives us more coverage without excessive scaling
-        const gridSize = 4 // 4x4 grid
+        // Create a 2x2 bookmatched pattern first
+        const basePatternSize = Math.max(originalWidth, originalHeight) * 2
 
-        // Set canvas size to accommodate the grid
-        canvas.width = originalWidth * gridSize
-        canvas.height = originalHeight * gridSize
+        // Then repeat it 2x2 times for more detail without excessive scaling
+        canvas.width = basePatternSize * 2
+        canvas.height = basePatternSize * 2
 
-        // Function to draw a single bookmatched pattern (2x2) at a specific position
-        const drawBookmatchedPattern = (startX: number, startY: number) => {
+        // Create the base 2x2 bookmatched pattern
+        const createBasePattern = () => {
           // Original image in top-left
-          ctx.drawImage(img, startX, startY, originalWidth, originalHeight)
+          ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
 
           // Horizontally flipped in top-right
           ctx.save()
-          ctx.translate(startX + originalWidth * 2, startY)
+          ctx.translate(originalWidth * 2, 0)
           ctx.scale(-1, 1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
 
           // Vertically flipped in bottom-left
           ctx.save()
-          ctx.translate(startX, startY + originalHeight * 2)
+          ctx.translate(0, originalHeight * 2)
           ctx.scale(1, -1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
 
           // Both horizontally and vertically flipped in bottom-right
           ctx.save()
-          ctx.translate(startX + originalWidth * 2, startY + originalHeight * 2)
+          ctx.translate(originalWidth * 2, originalHeight * 2)
           ctx.scale(-1, -1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
         }
 
-        // Draw multiple bookmatched patterns in a grid
-        for (let y = 0; y < gridSize; y += 2) {
-          for (let x = 0; x < gridSize; x += 2) {
-            drawBookmatchedPattern(x * originalWidth, y * originalHeight)
-          }
+        // Create the base pattern
+        createBasePattern()
+
+        // Now create a temporary canvas with just the base pattern
+        const tempCanvas = document.createElement("canvas")
+        tempCanvas.width = basePatternSize
+        tempCanvas.height = basePatternSize
+        const tempCtx = tempCanvas.getContext("2d")
+
+        if (tempCtx) {
+          // Copy the base pattern to the temp canvas
+          tempCtx.drawImage(canvas, 0, 0, basePatternSize, basePatternSize, 0, 0, basePatternSize, basePatternSize)
+
+          // Now use this base pattern to create a larger seamless pattern
+          // Top-left
+          ctx.drawImage(tempCanvas, 0, 0)
+
+          // Top-right
+          ctx.drawImage(tempCanvas, basePatternSize, 0)
+
+          // Bottom-left
+          ctx.drawImage(tempCanvas, 0, basePatternSize)
+
+          // Bottom-right
+          ctx.drawImage(tempCanvas, basePatternSize, basePatternSize)
         }
 
         // Set a smaller background size to maintain quality
-        // We'll use a tiling approach rather than scaling
-        const patternSize = Math.min(originalWidth, originalHeight) * 2
-        setBackgroundSize(`${patternSize}px ${patternSize}px`)
+        setBackgroundSize(`${basePatternSize}px ${basePatternSize}px`)
         setBackgroundPosition("center")
       } else {
         // ORIGINAL METHOD FOR ADEQUATELY SIZED IMAGES
-        // Set canvas size to 2x the image size to fit the bookmatched pattern
-        const patternSize = Math.max(img.width, img.height) * 2
+        // Create a classic bookmatched pattern
+        const patternSize = Math.max(originalWidth, originalHeight) * 2
         canvas.width = patternSize
         canvas.height = patternSize
 
         // Draw the original image in the top-left quadrant
-        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.drawImage(img, 0, 0)
 
         // Draw horizontally flipped image in top-right quadrant
         ctx.save()
         ctx.translate(patternSize, 0)
         ctx.scale(-1, 1)
-        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
         ctx.restore()
 
         // Draw vertically flipped image in bottom-left quadrant
         ctx.save()
         ctx.translate(0, patternSize)
         ctx.scale(1, -1)
-        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
         ctx.restore()
 
         // Draw both horizontally and vertically flipped image in bottom-right quadrant
         ctx.save()
         ctx.translate(patternSize, patternSize)
         ctx.scale(-1, -1)
-        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
         ctx.restore()
 
-        // Use the original background size for larger images
-        setBackgroundSize("400px 400px")
+        // Use a background size that ensures the pattern is visible but not too small
+        setBackgroundSize(`${patternSize / 2}px ${patternSize / 2}px`)
         setBackgroundPosition("center")
       }
 
-      // Store the bookmatched texture
-      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.95) // Higher quality JPEG
+      // Store the bookmatched texture with high quality
+      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.98) // Higher quality JPEG
       setTextureReady(true)
     }
 
