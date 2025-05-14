@@ -46,9 +46,8 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const [loading, setLoading] = useState(true)
   const [textureReady, setTextureReady] = useState(false)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const bookmatchedTextureRef = useRef<string | null>(null)
-  const mockupCanvasRef = useRef<HTMLCanvasElement>(null)
-  const [mockupDimensions, setMockupDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
 
   // Create bookmatched texture as soon as component mounts
   useEffect(() => {
@@ -86,60 +85,37 @@ export default function ProductVisualizer({ productImage, productName }: Product
         return
       }
 
-      // First, create a clean version of the image without any transparent areas
-      const cleanCanvas = document.createElement("canvas")
-      const cleanCtx = cleanCanvas.getContext("2d")
-
-      if (!cleanCtx) {
-        console.error("Could not get clean canvas context")
-        return
-      }
-
-      // Set clean canvas to the image size
-      cleanCanvas.width = img.width
-      cleanCanvas.height = img.height
-
-      // Fill with white background first to eliminate any transparency
-      cleanCtx.fillStyle = "#FFFFFF"
-      cleanCtx.fillRect(0, 0, cleanCanvas.width, cleanCanvas.height)
-
-      // Draw the image on top of the white background
-      cleanCtx.drawImage(img, 0, 0, img.width, img.height)
-
-      // Get the clean image data
-      const cleanImg = cleanCanvas
-
       // Set canvas size to 2x the image size to fit the bookmatched pattern
-      const patternSize = Math.max(cleanImg.width, cleanImg.height) * 2
+      const patternSize = Math.max(img.width, img.height) * 2
       canvas.width = patternSize
       canvas.height = patternSize
 
       // Draw the original image in the top-left quadrant
-      ctx.drawImage(cleanImg, 0, 0, cleanImg.width, cleanImg.height)
+      ctx.drawImage(img, 0, 0, img.width, img.height)
 
       // Draw horizontally flipped image in top-right quadrant
       ctx.save()
-      ctx.translate(cleanImg.width * 2, 0)
+      ctx.translate(patternSize, 0)
       ctx.scale(-1, 1)
-      ctx.drawImage(cleanImg, 0, 0, cleanImg.width, cleanImg.height)
+      ctx.drawImage(img, 0, 0, img.width, img.height)
       ctx.restore()
 
       // Draw vertically flipped image in bottom-left quadrant
       ctx.save()
-      ctx.translate(0, cleanImg.height * 2)
+      ctx.translate(0, patternSize)
       ctx.scale(1, -1)
-      ctx.drawImage(cleanImg, 0, 0, cleanImg.width, cleanImg.height)
+      ctx.drawImage(img, 0, 0, img.width, img.height)
       ctx.restore()
 
       // Draw both horizontally and vertically flipped image in bottom-right quadrant
       ctx.save()
-      ctx.translate(cleanImg.width * 2, cleanImg.height * 2)
+      ctx.translate(patternSize, patternSize)
       ctx.scale(-1, -1)
-      ctx.drawImage(cleanImg, 0, 0, cleanImg.width, cleanImg.height)
+      ctx.drawImage(img, 0, 0, img.width, img.height)
       ctx.restore()
 
       // Store the bookmatched texture
-      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.95)
+      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg")
       setTextureReady(true)
     }
 
@@ -158,103 +134,6 @@ export default function ProductVisualizer({ productImage, productName }: Product
       // Use direct path for local images
       img.src = imageUrl
     }
-  }
-
-  // Load mockup image and prepare canvas when tab changes
-  useEffect(() => {
-    if (!textureReady || loading) return
-
-    const mockup = MOCKUPS.find((m) => m.id === activeTab)
-    if (!mockup) return
-
-    const loadMockup = () => {
-      const mockupImg = document.createElement("img")
-      mockupImg.crossOrigin = "anonymous"
-
-      mockupImg.onload = () => {
-        setMockupDimensions({
-          width: mockupImg.width,
-          height: mockupImg.height,
-        })
-
-        // Draw on canvas in the next render cycle
-        setTimeout(() => {
-          renderVisualization(mockupImg)
-        }, 0)
-      }
-
-      mockupImg.onerror = (e) => {
-        console.error("Error loading mockup image:", e)
-      }
-
-      mockupImg.src = mockup.src
-    }
-
-    loadMockup()
-  }, [activeTab, textureReady, loading])
-
-  // Render the visualization on canvas
-  const renderVisualization = (mockupImg: HTMLImageElement) => {
-    const canvas = mockupCanvasRef.current
-    if (!canvas || !bookmatchedTextureRef.current) return
-
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    // Set canvas dimensions to match the mockup image
-    canvas.width = mockupImg.width
-    canvas.height = mockupImg.height
-
-    // Create a pattern from the bookmatched texture
-    const textureImg = document.createElement("img")
-    textureImg.crossOrigin = "anonymous"
-
-    textureImg.onload = () => {
-      // First, fill the entire canvas with the texture
-      const pattern = ctx.createPattern(textureImg, "repeat")
-      if (pattern) {
-        ctx.fillStyle = pattern
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-      }
-
-      // Then draw the mockup image on top, but with special handling for black areas
-      // Create a temporary canvas to analyze the mockup
-      const tempCanvas = document.createElement("canvas")
-      const tempCtx = tempCanvas.getContext("2d")
-      if (!tempCtx) return
-
-      tempCanvas.width = mockupImg.width
-      tempCanvas.height = mockupImg.height
-      tempCtx.drawImage(mockupImg, 0, 0)
-
-      // Get image data to analyze pixels
-      const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height)
-      const data = imageData.data
-
-      // Create a mask for non-black areas
-      for (let i = 0; i < data.length; i += 4) {
-        // Check if pixel is very dark (black or near black)
-        // R, G, B values all below 30 (out of 255) indicates a very dark pixel
-        if (data[i] < 30 && data[i + 1] < 30 && data[i + 2] < 30) {
-          // Make this pixel transparent in the mockup
-          data[i + 3] = 0 // Set alpha to 0
-        }
-      }
-
-      // Put the modified image data back
-      tempCtx.putImageData(imageData, 0, 0)
-
-      // Draw the modified mockup (with transparent black areas) on top of the texture
-      ctx.drawImage(tempCanvas, 0, 0)
-    }
-
-    textureImg.onerror = () => {
-      console.error("Error loading texture for visualization")
-      // Fallback to just showing the mockup
-      ctx.drawImage(mockupImg, 0, 0)
-    }
-
-    textureImg.src = bookmatchedTextureRef.current
   }
 
   return (
@@ -280,13 +159,24 @@ export default function ProductVisualizer({ productImage, productName }: Product
                   </div>
                 ) : (
                   <div className="flex justify-center">
-                    <canvas
-                      ref={mockupCanvasRef}
-                      width={mockupDimensions.width || 800}
-                      height={mockupDimensions.height || 600}
-                      className="max-w-full h-auto"
-                      style={{ maxHeight: "500px" }}
-                    />
+                    <div
+                      className="relative inline-block max-w-full"
+                      style={{
+                        backgroundImage: `url(${bookmatchedTextureRef.current || productImage})`,
+                        backgroundRepeat: "repeat",
+                        backgroundSize: "400px 400px", // Larger size for the bookmatched pattern
+                      }}
+                    >
+                      <img
+                        src={mockup.src || "/placeholder.svg"}
+                        alt={`${mockup.name} mockup with ${productName}`}
+                        className="block"
+                        style={{ maxWidth: "100%", height: "auto", maxHeight: "500px" }}
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg"
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
