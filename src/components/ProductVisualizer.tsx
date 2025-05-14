@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import Image from "next/image"
 
 interface ProductVisualizerProps {
   productImage: string
@@ -64,7 +63,7 @@ export default function ProductVisualizer({ productImage, productName, preload =
     const preloadImages = async () => {
       const loadPromises = MOCKUPS.map((mockup) => {
         return new Promise<void>((resolve) => {
-          const img = new Image()
+          const img = new window.Image()
           img.src = mockup.src
           img.onload = () => {
             setMockupImagesLoaded((prev) => ({ ...prev, [mockup.id]: true }))

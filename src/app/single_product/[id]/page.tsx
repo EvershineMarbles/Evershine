@@ -184,7 +184,7 @@ function ProductDetail() {
             setPreloadingVisualizer(true)
 
             // Preload the product image
-            const preloadImg = new Image()
+            const preloadImg = new window.Image()
             preloadImg.src = response.data.data[0].image[0]
 
             // Preload mockup room images
@@ -196,7 +196,7 @@ function ProductDetail() {
               "/assets/mockups/modern-bedroom.png",
               "/assets/mockups/minimalist.png",
             ].forEach((src) => {
-              const img = new Image()
+              const img = new window.Image()
               img.src = src
             })
           }
