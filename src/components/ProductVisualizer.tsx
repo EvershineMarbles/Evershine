@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import Image from "next/image"
 
 interface ProductVisualizerProps {
   productImage: string
   productName: string
+  preload?: boolean // Optional prop to control preloading behavior
 }
 
 // Define mockup rooms
@@ -16,9 +18,9 @@ const MOCKUPS = [
     src: "/assets/mockups/bathroom.png",
   },
   {
-    id: "modern-bedroom",
-    name: "Modern Bedroom",
-    src: "/assets/mockups/modern-bedroom.png",
+    id: "bedroom-green",
+    name: "Bedroom",
+    src: "/assets/mockups/bedroom-green.png",
   },
   {
     id: "living-room",
@@ -31,11 +33,10 @@ const MOCKUPS = [
     src: "/assets/mockups/luxury-living.png",
   },
   {
-    id: "bedroom-green",
-    name: "Bedroom",
-    src: "/assets/mockups/bedroom-green.png",
+    id: "modern-bedroom",
+    name: "Modern Bedroom",
+    src: "/assets/mockups/modern-bedroom.png",
   },
-
   {
     id: "minimalist",
     name: "Minimalist",
@@ -46,7 +47,7 @@ const MOCKUPS = [
 // Minimum dimensions we want to ensure for good coverage
 const MIN_IMAGE_SIZE = 650 // Images smaller than this will use the enhanced method
 
-export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
+export default function ProductVisualizer({ productImage, productName, preload = true }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const [loading, setLoading] = useState(true)
   const [textureReady, setTextureReady] = useState(false)
@@ -54,20 +55,49 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const bookmatchedTextureRef = useRef<string | null>(null)
   const [backgroundSize, setBackgroundSize] = useState("400px 400px") // Default size
   const [backgroundPosition, setBackgroundPosition] = useState("center") // Default position
+  const [mockupImagesLoaded, setMockupImagesLoaded] = useState<Record<string, boolean>>({})
+
+  // Preload all mockup images
+  useEffect(() => {
+    if (!preload) return
+
+    const preloadImages = async () => {
+      const loadPromises = MOCKUPS.map((mockup) => {
+        return new Promise<void>((resolve) => {
+          const img = new Image()
+          img.src = mockup.src
+          img.onload = () => {
+            setMockupImagesLoaded((prev) => ({ ...prev, [mockup.id]: true }))
+            resolve()
+          }
+          img.onerror = () => {
+            console.error(`Failed to preload mockup image: ${mockup.src}`)
+            resolve() // Still resolve to not block other images
+          }
+        })
+      })
+
+      await Promise.all(loadPromises)
+    }
+
+    preloadImages()
+  }, [preload])
 
   // Create bookmatched texture as soon as component mounts
   useEffect(() => {
+    // Start creating the bookmatched texture immediately
     createBookmatchedTexture(productImage)
   }, [productImage])
 
-  // Set a timeout to simulate loading and ensure the DOM is ready
+  // Remove artificial loading delay and rely on actual asset loading
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 1000)
+    // Check if all necessary assets are loaded
+    const allMockupsLoaded = Object.keys(mockupImagesLoaded).length === MOCKUPS.length
 
-    return () => clearTimeout(timer)
-  }, [])
+    if (textureReady && allMockupsLoaded) {
+      setLoading(false)
+    }
+  }, [textureReady, mockupImagesLoaded])
 
   // Create a bookmatched texture from the product image
   const createBookmatchedTexture = (imageUrl: string) => {
@@ -99,94 +129,110 @@ export default function ProductVisualizer({ productImage, productName }: Product
 
       if (isSmallImage) {
         // ENHANCED METHOD FOR SMALL IMAGES
-        // Instead of scaling up too much, we'll create a more detailed pattern
-        // with more repetitions but at a smaller scale to maintain quality
+        // Create a larger, more detailed bookmatched pattern
 
-        // For small images, we'll create a 4x4 grid of bookmatched patterns
-        // This gives us more coverage without excessive scaling
-        const gridSize = 4 // 4x4 grid
+        // Create a 2x2 bookmatched pattern first
+        const basePatternSize = Math.max(originalWidth, originalHeight) * 2
 
-        // Set canvas size to accommodate the grid
-        canvas.width = originalWidth * gridSize
-        canvas.height = originalHeight * gridSize
+        // Then repeat it 2x2 times for more detail without excessive scaling
+        canvas.width = basePatternSize * 2
+        canvas.height = basePatternSize * 2
 
-        // Function to draw a single bookmatched pattern (2x2) at a specific position
-        const drawBookmatchedPattern = (startX: number, startY: number) => {
+        // Create the base 2x2 bookmatched pattern
+        const createBasePattern = () => {
           // Original image in top-left
-          ctx.drawImage(img, startX, startY, originalWidth, originalHeight)
+          ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
 
           // Horizontally flipped in top-right
           ctx.save()
-          ctx.translate(startX + originalWidth * 2, startY)
+          ctx.translate(originalWidth * 2, 0)
           ctx.scale(-1, 1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
 
           // Vertically flipped in bottom-left
           ctx.save()
-          ctx.translate(startX, startY + originalHeight * 2)
+          ctx.translate(0, originalHeight * 2)
           ctx.scale(1, -1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
 
           // Both horizontally and vertically flipped in bottom-right
           ctx.save()
-          ctx.translate(startX + originalWidth * 2, startY + originalHeight * 2)
+          ctx.translate(originalWidth * 2, originalHeight * 2)
           ctx.scale(-1, -1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
         }
 
-        // Draw multiple bookmatched patterns in a grid
-        for (let y = 0; y < gridSize; y += 2) {
-          for (let x = 0; x < gridSize; x += 2) {
-            drawBookmatchedPattern(x * originalWidth, y * originalHeight)
-          }
+        // Create the base pattern
+        createBasePattern()
+
+        // Now create a temporary canvas with just the base pattern
+        const tempCanvas = document.createElement("canvas")
+        tempCanvas.width = basePatternSize
+        tempCanvas.height = basePatternSize
+        const tempCtx = tempCanvas.getContext("2d")
+
+        if (tempCtx) {
+          // Copy the base pattern to the temp canvas
+          tempCtx.drawImage(canvas, 0, 0, basePatternSize, basePatternSize, 0, 0, basePatternSize, basePatternSize)
+
+          // Now use this base pattern to create a larger seamless pattern
+          // Top-left
+          ctx.drawImage(tempCanvas, 0, 0)
+
+          // Top-right
+          ctx.drawImage(tempCanvas, basePatternSize, 0)
+
+          // Bottom-left
+          ctx.drawImage(tempCanvas, 0, basePatternSize)
+
+          // Bottom-right
+          ctx.drawImage(tempCanvas, basePatternSize, basePatternSize)
         }
 
         // Set a smaller background size to maintain quality
-        // We'll use a tiling approach rather than scaling
-        const patternSize = Math.min(originalWidth, originalHeight) * 2
-        setBackgroundSize(`${patternSize}px ${patternSize}px`)
+        setBackgroundSize(`${basePatternSize}px ${basePatternSize}px`)
         setBackgroundPosition("center")
       } else {
         // ORIGINAL METHOD FOR ADEQUATELY SIZED IMAGES
-        // Set canvas size to 2x the image size to fit the bookmatched pattern
-        const patternSize = Math.max(img.width, img.height) * 2
+        // Create a classic bookmatched pattern
+        const patternSize = Math.max(originalWidth, originalHeight) * 2
         canvas.width = patternSize
         canvas.height = patternSize
 
         // Draw the original image in the top-left quadrant
-        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.drawImage(img, 0, 0)
 
         // Draw horizontally flipped image in top-right quadrant
         ctx.save()
         ctx.translate(patternSize, 0)
         ctx.scale(-1, 1)
-        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
         ctx.restore()
 
         // Draw vertically flipped image in bottom-left quadrant
         ctx.save()
         ctx.translate(0, patternSize)
         ctx.scale(1, -1)
-        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
         ctx.restore()
 
         // Draw both horizontally and vertically flipped image in bottom-right quadrant
         ctx.save()
         ctx.translate(patternSize, patternSize)
         ctx.scale(-1, -1)
-        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
         ctx.restore()
 
-        // Use the original background size for larger images
-        setBackgroundSize("400px 400px")
+        // Use a background size that ensures the pattern is visible but not too small
+        setBackgroundSize(`${patternSize / 2}px ${patternSize / 2}px`)
         setBackgroundPosition("center")
       }
 
-      // Store the bookmatched texture
-      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.95) // Higher quality JPEG
+      // Store the bookmatched texture with high quality
+      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.98) // Higher quality JPEG
       setTextureReady(true)
     }
 
@@ -210,6 +256,18 @@ export default function ProductVisualizer({ productImage, productName }: Product
   return (
     <div className="w-full max-w-3xl mx-auto">
       <h2 className="text-xl font-bold mb-4">Product Visualizer</h2>
+
+      {/* Hidden preload container for mockup images */}
+      <div className="hidden">
+        {MOCKUPS.map((mockup) => (
+          <img
+            key={`preload-${mockup.id}`}
+            src={mockup.src || "/placeholder.svg"}
+            alt=""
+            onLoad={() => setMockupImagesLoaded((prev) => ({ ...prev, [mockup.id]: true }))}
+          />
+        ))}
+      </div>
 
       <Tabs defaultValue={MOCKUPS[0].id} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-4">
@@ -237,7 +295,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
                         backgroundRepeat: "repeat",
                         backgroundSize: backgroundSize,
                         backgroundPosition: backgroundPosition,
-                        imageRendering: "auto", // Changed from "high-quality" to "auto"
+                        imageRendering: "auto",
                       }}
                     >
                       <img

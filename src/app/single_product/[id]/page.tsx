@@ -132,6 +132,7 @@ function ProductDetail() {
   const [showFullDescription, setShowFullDescription] = useState(false)
   const [quantityFormula, setQuantityFormula] = useState<string | null>(null)
   const [showVisualizer, setShowVisualizer] = useState(false)
+  const [preloadingVisualizer, setPreloadingVisualizer] = useState(false)
 
   // Update the useEffect to use this enhanced debugging
   useEffect(() => {
@@ -176,6 +177,28 @@ function ProductDetail() {
               Number(processedProduct.numberOfPieces),
             )
             setQuantityFormula(formula)
+          }
+
+          // Start preloading visualizer assets when product data is loaded
+          if (response.data.success && response.data.data?.[0] && response.data.data[0].image?.length > 0) {
+            setPreloadingVisualizer(true)
+
+            // Preload the product image
+            const preloadImg = new Image()
+            preloadImg.src = response.data.data[0].image[0]
+
+            // Preload mockup room images
+            ;[
+              "/assets/mockups/bathroom.png",
+              "/assets/mockups/bedroom-green.png",
+              "/assets/mockups/living-room.jpeg",
+              "/assets/mockups/luxury-living.png",
+              "/assets/mockups/modern-bedroom.png",
+              "/assets/mockups/minimalist.png",
+            ].forEach((src) => {
+              const img = new Image()
+              img.src = src
+            })
           }
         } else {
           throw new Error(response.data.msg || "No data found")
@@ -658,7 +681,7 @@ function ProductDetail() {
           {/* Product Visualizer Section */}
           {showVisualizer && product.image.length > 0 && (
             <div className="max-w-6xl mx-auto mt-12 border-t pt-8">
-              <ProductVisualizer productImage={product.image[0]} productName={product.name} />
+              <ProductVisualizer productImage={product.image[0]} productName={product.name} preload={true} />
             </div>
           )}
 
