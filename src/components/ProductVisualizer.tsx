@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
+import { Loader2, RefreshCw } from "lucide-react"
 
 interface ProductVisualizerProps {
   productImage: string
   productName: string
-  preload?: boolean // Optional prop to control preloading behavior
+  preload?: boolean
 }
 
 // Define mockup rooms
@@ -15,6 +17,7 @@ const MOCKUPS = [
     id: "bathroom",
     name: "Bathroom",
     src: "/assets/mockups/bathroom.png",
+    maskSrc: "/assets/mockups/bathroom-mask.png", // Optional mask for better blending
   },
   {
     id: "modern-bedroom",
@@ -43,426 +46,287 @@ const MOCKUPS = [
   },
 ]
 
-// Thresholds for image size classification
-const SIZE_THRESHOLDS = {
-  VERY_SMALL: 200, // Images smaller than this in either dimension
-  SMALL: 500, // Images smaller than this in either dimension
-  MEDIUM: 800, // Images smaller than this in either dimension
-  // Anything larger is considered LARGE
-}
-
-// Thresholds for aspect ratio classification
-const ASPECT_RATIO_THRESHOLDS = {
-  EXTREME: 3.0, // Aspect ratio greater than this is considered extreme
-  UNBALANCED: 2.0, // Aspect ratio greater than this is considered unbalanced
-  // Anything closer to 1 is considered balanced
-}
-
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
-  const [debugMode, setDebugMode] = useState(true)
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const [loading, setLoading] = useState(true)
-  const [textureReady, setTextureReady] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const bookmatchedTextureRef = useRef<string | null>(null)
-  const [backgroundSize, setBackgroundSize] = useState("400px 400px") // Default size
-  const [backgroundPosition, setBackgroundPosition] = useState("center") // Default position
-  const [processingMethod, setProcessingMethod] = useState<string>("standard")
-  const [imageStats, setImageStats] = useState<{
-    width: number
-    height: number
-    aspectRatio: number
-    sizeCategory: string
-    aspectRatioCategory: string
-  } | null>(null)
+  const [renderMethod, setRenderMethod] = useState<"canvas" | "css">("canvas")
+  const [retryCount, setRetryCount] = useState(0)
 
-  // Create bookmatched texture as soon as component mounts
-  useEffect(() => {
-    createBookmatchedTexture(productImage)
-  }, [productImage])
+  // Use a direct reference to the image element for more control
+  const productImageRef = useRef<HTMLImageElement | null>(null)
+  const mockupImageRef = useRef<HTMLImageElement | null>(null)
 
-  // Set a timeout to simulate loading and ensure the DOM is ready
+  // Effect to handle visualization
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Reset error state on tab change or retry
+    setError(null)
+    setLoading(true)
+
+    // Create a new image element for the product
+    const productImg = new Image()
+    productImg.crossOrigin = "anonymous"
+
+    // Create a new image element for the mockup
+    const mockupImg = new Image()
+    mockupImg.crossOrigin = "anonymous"
+
+    // Store references
+    productImageRef.current = productImg
+    mockupImageRef.current = mockupImg
+
+    // Handle product image load
+    productImg.onload = () => {
+      console.log("Product image loaded successfully:", {
+        width: productImg.width,
+        height: productImg.height,
+        src: productImage,
+      })
+
+      // Now load the mockup image
+      const activeMockup = MOCKUPS.find((m) => m.id === activeTab)
+      if (activeMockup) {
+        mockupImg.src = activeMockup.src
+      }
+    }
+
+    // Handle product image error
+    productImg.onerror = (e) => {
+      console.error("Failed to load product image:", e)
+      setError("Failed to load product image. Please try again.")
       setLoading(false)
-    }, 1000)
-
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Helper function to classify image size
-  const classifyImageSize = (width: number, height: number) => {
-    const minDimension = Math.min(width, height)
-
-    if (minDimension < SIZE_THRESHOLDS.VERY_SMALL) return "VERY_SMALL"
-    if (minDimension < SIZE_THRESHOLDS.SMALL) return "SMALL"
-    if (minDimension < SIZE_THRESHOLDS.MEDIUM) return "MEDIUM"
-    return "LARGE"
-  }
-
-  // Helper function to classify aspect ratio
-  const classifyAspectRatio = (width: number, height: number) => {
-    const aspectRatio = Math.max(width / height, height / width)
-
-    if (aspectRatio > ASPECT_RATIO_THRESHOLDS.EXTREME) return "EXTREME"
-    if (aspectRatio > ASPECT_RATIO_THRESHOLDS.UNBALANCED) return "UNBALANCED"
-    return "BALANCED"
-  }
-
-  // Calculate optimal repetition factor based on image dimensions
-  const calculateRepetitionFactor = (width: number, height: number) => {
-    const sizeCategory = classifyImageSize(width, height)
-    const aspectRatioCategory = classifyAspectRatio(width, height)
-
-    // Base repetition factor on size
-    let repetitionFactor = 1
-
-    if (sizeCategory === "VERY_SMALL") {
-      repetitionFactor = 10
-    } else if (sizeCategory === "SMALL") {
-      repetitionFactor = 6
-    } else if (sizeCategory === "MEDIUM") {
-      repetitionFactor = 4
-    } else {
-      repetitionFactor = 2
     }
 
-    // Adjust based on aspect ratio
-    if (aspectRatioCategory === "EXTREME") {
-      repetitionFactor += 4
-    } else if (aspectRatioCategory === "UNBALANCED") {
-      repetitionFactor += 2
+    // Handle mockup image load
+    mockupImg.onload = () => {
+      console.log("Mockup image loaded successfully")
+      renderVisualization()
     }
 
-    return repetitionFactor
-  }
-
-  // Calculate optimal background size based on image dimensions
-  const calculateBackgroundSize = (width: number, height: number) => {
-    const sizeCategory = classifyImageSize(width, height)
-    const aspectRatioCategory = classifyAspectRatio(width, height)
-
-    // Base size on the minimum dimension to ensure proper coverage
-    const minDimension = Math.min(width, height)
-
-    // For very small or small images, we want to show more repetitions
-    // so we use a smaller background size
-    if (sizeCategory === "VERY_SMALL") {
-      return `${minDimension * 2}px ${minDimension * 2}px`
-    } else if (sizeCategory === "SMALL") {
-      return `${minDimension * 3}px ${minDimension * 3}px`
-    } else if (aspectRatioCategory === "EXTREME" || aspectRatioCategory === "UNBALANCED") {
-      // For unbalanced aspect ratios, we want to show more repetitions
-      return `${minDimension * 4}px ${minDimension * 4}px`
-    } else {
-      // For larger, balanced images, we can use a larger background size
-      return `${Math.max(width, height)}px ${Math.max(width, height)}px`
+    // Handle mockup image error
+    mockupImg.onerror = (e) => {
+      console.error("Failed to load mockup image:", e)
+      setError("Failed to load room mockup. Please try again.")
+      setLoading(false)
     }
-  }
 
-  // Enhanced bookmatched texture creation function
-  const createBookmatchedTexture = (imageUrl: string) => {
-    // If we already created the texture, don't recreate it
-    if (bookmatchedTextureRef.current) {
-      setTextureReady(true)
+    // Start loading the product image
+    productImg.src = productImage
+
+    // Cleanup function
+    return () => {
+      productImg.onload = null
+      productImg.onerror = null
+      mockupImg.onload = null
+      mockupImg.onerror = null
+    }
+  }, [productImage, activeTab, retryCount, renderMethod])
+
+  // Function to render the visualization
+  const renderVisualization = () => {
+    if (!canvasRef.current || !productImageRef.current || !mockupImageRef.current) {
+      setError("Canvas or images not available")
+      setLoading(false)
       return
     }
 
-    // Create an image element to load the texture
-    const img = document.createElement("img")
-    img.crossOrigin = "anonymous"
-
-    img.onload = () => {
-      // Add error handling and logging to diagnose image loading issues
-      console.log("Image successfully loaded:", {
-        url: imageUrl,
-        width: img.width,
-        height: img.height,
-        complete: img.complete,
-        naturalWidth: img.naturalWidth,
-        naturalHeight: img.naturalHeight,
-      })
-
-      // Check if image actually loaded with dimensions
-      if (img.width === 0 || img.height === 0) {
-        console.error("Image loaded but has zero dimensions:", imageUrl)
-        bookmatchedTextureRef.current = imageUrl
-        setTextureReady(true)
-        return
-      }
-
-      const originalWidth = img.width
-      const originalHeight = img.height
-      const aspectRatio = originalWidth / originalHeight
-
-      // Classify the image
-      const sizeCategory = classifyImageSize(originalWidth, originalHeight)
-      const aspectRatioCategory = classifyAspectRatio(originalWidth, originalHeight)
-
-      // Store image stats for debugging
-      setImageStats({
-        width: originalWidth,
-        height: originalHeight,
-        aspectRatio: aspectRatio,
-        sizeCategory: sizeCategory,
-        aspectRatioCategory: aspectRatioCategory,
-      })
-
-      // Log detailed image information
-      console.log(`Product image analysis:`, {
-        dimensions: `${originalWidth}×${originalHeight}px`,
-        aspectRatio: aspectRatio.toFixed(2),
-        sizeCategory: sizeCategory,
-        aspectRatioCategory: aspectRatioCategory,
-      })
-
-      // Create a canvas to manipulate the image
-      const canvas = document.createElement("canvas")
+    try {
+      const canvas = canvasRef.current
       const ctx = canvas.getContext("2d")
 
       if (!ctx) {
-        console.error("Could not get canvas context")
+        setError("Could not get canvas context")
+        setLoading(false)
         return
       }
 
-      // Determine the processing method based on image characteristics
-      let method = "standard"
+      const productImg = productImageRef.current
+      const mockupImg = mockupImageRef.current
 
-      if (sizeCategory === "VERY_SMALL" || aspectRatioCategory === "EXTREME") {
-        method = "super-enhanced"
-      } else if (sizeCategory === "SMALL" || aspectRatioCategory === "UNBALANCED") {
-        method = "enhanced"
-      }
+      // Set canvas dimensions to match mockup image
+      canvas.width = mockupImg.width
+      canvas.height = mockupImg.height
 
-      setProcessingMethod(method)
-      console.log(`Using ${method} processing method`)
+      // Draw the mockup image first
+      ctx.drawImage(mockupImg, 0, 0, canvas.width, canvas.height)
 
-      // Process the image based on the determined method
-      if (method === "super-enhanced") {
-        // SUPER-ENHANCED METHOD FOR VERY SMALL OR EXTREME ASPECT RATIO IMAGES
+      // Get the active mockup to check for mask
+      const activeMockup = MOCKUPS.find((m) => m.id === activeTab)
 
-        // Calculate repetition factor
-        const repetitionFactor = calculateRepetitionFactor(originalWidth, originalHeight)
-
-        // Create a normalized square version of the image
-        const normalSize = Math.max(originalWidth, originalHeight)
-        const tempCanvas = document.createElement("canvas")
-        tempCanvas.width = normalSize
-        tempCanvas.height = normalSize
-        const tempCtx = tempCanvas.getContext("2d")
-
-        if (tempCtx) {
-          // Center the image in the square canvas
-          const offsetX = (normalSize - originalWidth) / 2
-          const offsetY = (normalSize - originalHeight) / 2
-
-          // Draw the original image centered in the square canvas
-          tempCtx.drawImage(img, offsetX, offsetY, originalWidth, originalHeight)
-
-          // Create a large grid of bookmatched patterns
-          canvas.width = normalSize * repetitionFactor
-          canvas.height = normalSize * repetitionFactor
-
-          // Create a 2x2 bookmatched pattern from the normalized image
-          const patternCanvas = document.createElement("canvas")
-          patternCanvas.width = normalSize * 2
-          patternCanvas.height = normalSize * 2
-          const patternCtx = patternCanvas.getContext("2d")
-
-          if (patternCtx) {
-            // Original image in top-left
-            patternCtx.drawImage(tempCanvas, 0, 0)
-
-            // Horizontally flipped in top-right
-            patternCtx.save()
-            patternCtx.translate(normalSize * 2, 0)
-            patternCtx.scale(-1, 1)
-            patternCtx.drawImage(tempCanvas, 0, 0)
-            patternCtx.restore()
-
-            // Vertically flipped in bottom-left
-            patternCtx.save()
-            patternCtx.translate(0, normalSize * 2)
-            patternCtx.scale(1, -1)
-            patternCtx.drawImage(tempCanvas, 0, 0)
-            patternCtx.restore()
-
-            // Both horizontally and vertically flipped in bottom-right
-            patternCtx.save()
-            patternCtx.translate(normalSize * 2, normalSize * 2)
-            patternCtx.scale(-1, -1)
-            patternCtx.drawImage(tempCanvas, 0, 0)
-            patternCtx.restore()
-
-            // Now tile this pattern across the main canvas
-            for (let y = 0; y < canvas.height; y += normalSize * 2) {
-              for (let x = 0; x < canvas.width; x += normalSize * 2) {
-                ctx.drawImage(patternCanvas, x, y)
-              }
-            }
-          }
-
-          // Calculate optimal background size
-          const bgSize = calculateBackgroundSize(originalWidth, originalHeight)
-          setBackgroundSize(bgSize)
-          console.log(`Set background size to ${bgSize}`)
+      // If we have a mask for this mockup, use it for better blending
+      if (activeMockup?.maskSrc) {
+        const maskImg = new Image()
+        maskImg.crossOrigin = "anonymous"
+        maskImg.onload = () => {
+          applyMaskedTexture(ctx, productImg, maskImg, canvas.width, canvas.height)
+          setLoading(false)
         }
-      } else if (method === "enhanced") {
-        // ENHANCED METHOD FOR SMALL OR UNBALANCED ASPECT RATIO IMAGES
-
-        // Calculate repetition factor
-        const repetitionFactor = calculateRepetitionFactor(originalWidth, originalHeight)
-
-        // Set canvas size to accommodate the grid
-        canvas.width = originalWidth * repetitionFactor
-        canvas.height = originalHeight * repetitionFactor
-
-        // Function to draw a single bookmatched pattern (2x2) at a specific position
-        const drawBookmatchedPattern = (startX: number, startY: number) => {
-          // Original image in top-left
-          ctx.drawImage(img, startX, startY, originalWidth, originalHeight)
-
-          // Horizontally flipped in top-right
-          ctx.save()
-          ctx.translate(startX + originalWidth * 2, startY)
-          ctx.scale(-1, 1)
-          ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
-          ctx.restore()
-
-          // Vertically flipped in bottom-left
-          ctx.save()
-          ctx.translate(startX, startY + originalHeight * 2)
-          ctx.scale(1, -1)
-          ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
-          ctx.restore()
-
-          // Both horizontally and vertically flipped in bottom-right
-          ctx.save()
-          ctx.translate(startX + originalWidth * 2, startY + originalHeight * 2)
-          ctx.scale(-1, -1)
-          ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
-          ctx.restore()
+        maskImg.onerror = () => {
+          // Fall back to standard method if mask fails to load
+          applyStandardTexture(ctx, productImg, canvas.width, canvas.height)
+          setLoading(false)
         }
-
-        // Draw multiple bookmatched patterns in a grid
-        for (let y = 0; y < repetitionFactor; y += 2) {
-          for (let x = 0; x < repetitionFactor; x += 2) {
-            drawBookmatchedPattern(x * originalWidth, y * originalHeight)
-          }
-        }
-
-        // Calculate optimal background size
-        const bgSize = calculateBackgroundSize(originalWidth, originalHeight)
-        setBackgroundSize(bgSize)
-        console.log(`Set background size to ${bgSize}`)
+        maskImg.src = activeMockup.maskSrc
       } else {
-        // STANDARD METHOD FOR NORMAL-SIZED IMAGES
-
-        // Set canvas size to 2x the image size to fit the bookmatched pattern
-        const patternSize = Math.max(originalWidth, originalHeight) * 2
-        canvas.width = patternSize
-        canvas.height = patternSize
-
-        // Draw the original image in the top-left quadrant
-        ctx.drawImage(img, 0, 0)
-
-        // Draw horizontally flipped image in top-right quadrant
-        ctx.save()
-        ctx.translate(patternSize, 0)
-        ctx.scale(-1, 1)
-        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
-        ctx.restore()
-
-        // Draw vertically flipped image in bottom-left quadrant
-        ctx.save()
-        ctx.translate(0, patternSize)
-        ctx.scale(1, -1)
-        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
-        ctx.restore()
-
-        // Draw both horizontally and vertically flipped image in bottom-right quadrant
-        ctx.save()
-        ctx.translate(patternSize, patternSize)
-        ctx.scale(-1, -1)
-        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
-        ctx.restore()
-
-        // Calculate optimal background size
-        const bgSize = calculateBackgroundSize(originalWidth, originalHeight)
-        setBackgroundSize(bgSize)
-        console.log(`Set background size to ${bgSize}`)
+        // Use standard method without mask
+        applyStandardTexture(ctx, productImg, canvas.width, canvas.height)
+        setLoading(false)
       }
-
-      setBackgroundPosition("center")
-
-      // Store the bookmatched texture with high quality
-      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.98)
-      setTextureReady(true)
-    }
-
-    img.onerror = (error) => {
-      console.error("Error loading product image for bookmatching:", error)
-      console.error("Failed image URL:", imageUrl)
-
-      // Try an alternative approach with a new image
-      const fallbackImg = new Image()
-      fallbackImg.crossOrigin = "anonymous"
-
-      fallbackImg.onload = () => {
-        console.log("Fallback image loaded successfully")
-        bookmatchedTextureRef.current = fallbackImg.src
-        setTextureReady(true)
-      }
-
-      fallbackImg.onerror = () => {
-        console.error("Even fallback approach failed")
-        // Use a placeholder pattern as absolute fallback
-        bookmatchedTextureRef.current =
-          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' strokeWidth='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
-        setTextureReady(true)
-      }
-
-      // Try direct URL first as fallback
-      if (imageUrl.startsWith("http")) {
-        fallbackImg.src = imageUrl
-      } else {
-        fallbackImg.src =
-          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' strokeWidth='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
-      }
-    }
-
-    // Handle CORS issues by using a proxy if needed
-    if (imageUrl.startsWith("http")) {
-      // Use proxy for external images
-      img.src = `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`
-    } else {
-      // Use direct path for local images
-      img.src = imageUrl
+    } catch (err) {
+      console.error("Error rendering visualization:", err)
+      setError("Failed to render visualization. Please try again.")
+      setLoading(false)
     }
   }
 
-  // Add a function to force reload the visualizer
-  const forceReload = () => {
-    bookmatchedTextureRef.current = null
-    setTextureReady(false)
+  // Apply texture with mask for better blending
+  const applyMaskedTexture = (
+    ctx: CanvasRenderingContext2D,
+    productImg: HTMLImageElement,
+    maskImg: HTMLImageElement,
+    width: number,
+    height: number,
+  ) => {
+    // Create a temporary canvas for the texture pattern
+    const patternCanvas = document.createElement("canvas")
+    const patternCtx = patternCanvas.getContext("2d")
+
+    if (!patternCtx) return
+
+    // Create a bookmatched pattern
+    const patternSize = Math.max(productImg.width, productImg.height) * 2
+    patternCanvas.width = patternSize
+    patternCanvas.height = patternSize
+
+    // Draw original image in top-left
+    patternCtx.drawImage(productImg, 0, 0)
+
+    // Draw horizontally flipped in top-right
+    patternCtx.save()
+    patternCtx.translate(patternSize, 0)
+    patternCtx.scale(-1, 1)
+    patternCtx.drawImage(productImg, 0, 0, productImg.width, productImg.height)
+    patternCtx.restore()
+
+    // Draw vertically flipped in bottom-left
+    patternCtx.save()
+    patternCtx.translate(0, patternSize)
+    patternCtx.scale(1, -1)
+    patternCtx.drawImage(productImg, 0, 0, productImg.width, productImg.height)
+    patternCtx.restore()
+
+    // Draw both horizontally and vertically flipped in bottom-right
+    patternCtx.save()
+    patternCtx.translate(patternSize, patternSize)
+    patternCtx.scale(-1, -1)
+    patternCtx.drawImage(productImg, 0, 0, productImg.width, productImg.height)
+    patternCtx.restore()
+
+    // Create a pattern from the bookmatched texture
+    const pattern = ctx.createPattern(patternCanvas, "repeat")
+    if (!pattern) return
+
+    // Draw the mask
+    ctx.drawImage(maskImg, 0, 0, width, height)
+
+    // Use the mask as a composite operation
+    ctx.globalCompositeOperation = "source-in"
+
+    // Fill with the pattern
+    ctx.fillStyle = pattern
+    ctx.fillRect(0, 0, width, height)
+
+    // Reset composite operation
+    ctx.globalCompositeOperation = "source-over"
+  }
+
+  // Apply standard texture without mask
+  const applyStandardTexture = (
+    ctx: CanvasRenderingContext2D,
+    productImg: HTMLImageElement,
+    width: number,
+    height: number,
+  ) => {
+    // Create a temporary canvas for the texture pattern
+    const patternCanvas = document.createElement("canvas")
+    const patternCtx = patternCanvas.getContext("2d")
+
+    if (!patternCtx) return
+
+    // Create a bookmatched pattern
+    const patternSize = Math.max(productImg.width, productImg.height) * 2
+    patternCanvas.width = patternSize
+    patternCanvas.height = patternSize
+
+    // Draw original image in top-left
+    patternCtx.drawImage(productImg, 0, 0)
+
+    // Draw horizontally flipped in top-right
+    patternCtx.save()
+    patternCtx.translate(patternSize, 0)
+    patternCtx.scale(-1, 1)
+    patternCtx.drawImage(productImg, 0, 0, productImg.width, productImg.height)
+    patternCtx.restore()
+
+    // Draw vertically flipped in bottom-left
+    patternCtx.save()
+    patternCtx.translate(0, patternSize)
+    patternCtx.scale(1, -1)
+    patternCtx.drawImage(productImg, 0, 0, productImg.width, productImg.height)
+    patternCtx.restore()
+
+    // Draw both horizontally and vertically flipped in bottom-right
+    patternCtx.save()
+    patternCtx.translate(patternSize, patternSize)
+    patternCtx.scale(-1, -1)
+    patternCtx.drawImage(productImg, 0, 0, productImg.width, productImg.height)
+    patternCtx.restore()
+
+    // Create a pattern from the bookmatched texture
+    const pattern = ctx.createPattern(patternCanvas, "repeat")
+    if (!pattern) return
+
+    // Define areas to apply the texture (simplified for this example)
+    // In a real implementation, you would use more precise coordinates based on the mockup
+    const areas = [
+      { x: 0, y: 0, width: width, height: height * 0.3 }, // Top wall
+      { x: 0, y: height * 0.7, width: width, height: height * 0.3 }, // Bottom wall/floor
+    ]
+
+    // Apply the pattern to each area
+    ctx.fillStyle = pattern
+    areas.forEach((area) => {
+      ctx.fillRect(area.x, area.y, area.width, area.height)
+    })
+  }
+
+  // Function to retry visualization
+  const handleRetry = () => {
+    setRetryCount((prev) => prev + 1)
+    setError(null)
     setLoading(true)
-    createBookmatchedTexture(productImage)
-    setTimeout(() => setLoading(false), 1000)
+  }
+
+  // Function to toggle render method
+  const toggleRenderMethod = () => {
+    setRenderMethod((prev) => (prev === "canvas" ? "css" : "canvas"))
   }
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      <h2 className="text-xl font-bold mb-4">Product Visualizer</h2>
-
-      {/* Optional debug info - can be removed in production */}
-      {imageStats && (
-        <div className="text-xs text-gray-500 mb-2">
-          <p>
-            Image: {imageStats.width}×{imageStats.height}px | Aspect ratio: {imageStats.aspectRatio.toFixed(2)} |
-            Processing: {processingMethod}
-          </p>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Product Visualizer</h2>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={toggleRenderMethod} className="text-xs">
+            {renderMethod === "canvas" ? "Switch to CSS Mode" : "Switch to Canvas Mode"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleRetry} className="text-xs">
+            <RefreshCw className="h-3 w-3 mr-1" />
+            Refresh
+          </Button>
         </div>
-      )}
+      </div>
 
       <Tabs defaultValue={MOCKUPS[0].id} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-4">
@@ -477,42 +341,47 @@ export default function ProductVisualizer({ productImage, productName }: Product
           <TabsContent key={mockup.id} value={mockup.id} className="mt-0">
             <div className="border rounded-lg p-2 bg-gray-50">
               <div className="relative rounded-lg overflow-hidden bg-white border">
-                {loading || !textureReady ? (
-                  <div className="flex items-center justify-center h-[200px]">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#194a95]"></div>
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center h-[300px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-[#194a95] mb-2" />
+                    <p className="text-sm text-gray-500">Loading visualization...</p>
+                  </div>
+                ) : error ? (
+                  <div className="flex flex-col items-center justify-center h-[300px]">
+                    <p className="text-sm text-red-500 mb-2">{error}</p>
+                    <Button variant="outline" size="sm" onClick={handleRetry}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Try Again
+                    </Button>
                   </div>
                 ) : (
                   <div className="flex justify-center">
-                    <div
-                      className="relative inline-block max-w-full"
-                      style={{
-                        backgroundImage: `url(${bookmatchedTextureRef.current || productImage})`,
-                        backgroundRepeat: "repeat",
-                        backgroundSize: backgroundSize,
-                        backgroundPosition: backgroundPosition,
-                      }}
-                    >
-                      <img
-                        src={
-                          mockup.src ||
-                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E" ||
-                          "/placeholder.svg" ||
-                          "/placeholder.svg"
-                        }
-                        alt={`${mockup.name} mockup with ${productName}`}
-                        className="block"
+                    {renderMethod === "canvas" ? (
+                      <canvas ref={canvasRef} className="max-w-full h-auto" style={{ maxHeight: "500px" }} />
+                    ) : (
+                      <div
+                        className="relative inline-block"
                         style={{
-                          maxWidth: "100%",
-                          height: "auto",
-                          maxHeight: "500px",
-                          objectFit: "contain",
+                          backgroundImage: `url(${mockup.src})`,
+                          backgroundSize: "contain",
+                          backgroundPosition: "center",
+                          backgroundRepeat: "no-repeat",
+                          width: "100%",
+                          height: "300px",
                         }}
-                        onError={(e) => {
-                          e.currentTarget.src =
-                            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' strokeWidth='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
-                        }}
-                      />
-                    </div>
+                      >
+                        <div
+                          className="absolute inset-0"
+                          style={{
+                            backgroundImage: `url(${productImage})`,
+                            backgroundSize: "200px 200px",
+                            backgroundRepeat: "repeat",
+                            opacity: 0.8,
+                            mixBlendMode: "multiply",
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -524,6 +393,25 @@ export default function ProductVisualizer({ productImage, productName }: Product
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* Technical information for debugging */}
+      <div className="mt-4 p-3 bg-gray-50 rounded-lg border text-xs">
+        <p className="font-medium mb-1">Technical Information:</p>
+        <ul className="list-disc pl-5 space-y-1 text-gray-600">
+          <li>Render method: {renderMethod}</li>
+          <li>Product image: {productImage ? productImage.substring(0, 50) + "..." : "Not loaded"}</li>
+          <li>
+            Image dimensions: {productImageRef.current?.width || 0}×{productImageRef.current?.height || 0}px
+          </li>
+          <li>
+            Aspect ratio:{" "}
+            {productImageRef.current
+              ? (productImageRef.current.width / productImageRef.current.height).toFixed(2)
+              : "N/A"}
+          </li>
+          <li>Retry count: {retryCount}</li>
+        </ul>
+      </div>
     </div>
   )
 }
