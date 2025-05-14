@@ -59,6 +59,7 @@ const ASPECT_RATIO_THRESHOLDS = {
 }
 
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
+  const [debugMode, setDebugMode] = useState(true)
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const [loading, setLoading] = useState(true)
   const [textureReady, setTextureReady] = useState(false)
@@ -172,6 +173,24 @@ export default function ProductVisualizer({ productImage, productName }: Product
     img.crossOrigin = "anonymous"
 
     img.onload = () => {
+      // Add error handling and logging to diagnose image loading issues
+      console.log("Image successfully loaded:", {
+        url: imageUrl,
+        width: img.width,
+        height: img.height,
+        complete: img.complete,
+        naturalWidth: img.naturalWidth,
+        naturalHeight: img.naturalHeight,
+      })
+
+      // Check if image actually loaded with dimensions
+      if (img.width === 0 || img.height === 0) {
+        console.error("Image loaded but has zero dimensions:", imageUrl)
+        bookmatchedTextureRef.current = imageUrl
+        setTextureReady(true)
+        return
+      }
+
       const originalWidth = img.width
       const originalHeight = img.height
       const aspectRatio = originalWidth / originalHeight
@@ -383,9 +402,33 @@ export default function ProductVisualizer({ productImage, productName }: Product
 
     img.onerror = (error) => {
       console.error("Error loading product image for bookmatching:", error)
-      // Fallback to original image if there's an error
-      bookmatchedTextureRef.current = imageUrl
-      setTextureReady(true)
+      console.error("Failed image URL:", imageUrl)
+
+      // Try an alternative approach with a new image
+      const fallbackImg = new Image()
+      fallbackImg.crossOrigin = "anonymous"
+
+      fallbackImg.onload = () => {
+        console.log("Fallback image loaded successfully")
+        bookmatchedTextureRef.current = fallbackImg.src
+        setTextureReady(true)
+      }
+
+      fallbackImg.onerror = () => {
+        console.error("Even fallback approach failed")
+        // Use a placeholder pattern as absolute fallback
+        bookmatchedTextureRef.current =
+          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' strokeWidth='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
+        setTextureReady(true)
+      }
+
+      // Try direct URL first as fallback
+      if (imageUrl.startsWith("http")) {
+        fallbackImg.src = imageUrl
+      } else {
+        fallbackImg.src =
+          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' strokeWidth='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
+      }
     }
 
     // Handle CORS issues by using a proxy if needed
@@ -396,6 +439,15 @@ export default function ProductVisualizer({ productImage, productName }: Product
       // Use direct path for local images
       img.src = imageUrl
     }
+  }
+
+  // Add a function to force reload the visualizer
+  const forceReload = () => {
+    bookmatchedTextureRef.current = null
+    setTextureReady(false)
+    setLoading(true)
+    createBookmatchedTexture(productImage)
+    setTimeout(() => setLoading(false), 1000)
   }
 
   return (
@@ -444,6 +496,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
                         src={
                           mockup.src ||
                           "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E" ||
+                          "/placeholder.svg" ||
                           "/placeholder.svg"
                         }
                         alt={`${mockup.name} mockup with ${productName}`}
