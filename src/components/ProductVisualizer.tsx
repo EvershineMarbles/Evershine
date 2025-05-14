@@ -17,9 +17,9 @@ const MOCKUPS = [
     src: "/assets/mockups/bathroom.png",
   },
   {
-    id: "modern-bedroom",
-    name: "Modern Bedroom",
-    src: "/assets/mockups/modern-bedroom.png",
+    id: "bedroom-green",
+    name: "Bedroom",
+    src: "/assets/mockups/bedroom-green.png",
   },
   {
     id: "living-room",
@@ -32,9 +32,9 @@ const MOCKUPS = [
     src: "/assets/mockups/luxury-living.png",
   },
   {
-    id: "bedroom-green",
-    name: "Bedroom",
-    src: "/assets/mockups/bedroom-green.png",
+    id: "modern-bedroom",
+    name: "Modern Bedroom",
+    src: "/assets/mockups/modern-bedroom.png",
   },
   {
     id: "minimalist",
@@ -43,7 +43,7 @@ const MOCKUPS = [
   },
 ]
 
-// Thresholds for image size classification
+// Thresholds for different image sizes
 const SIZE_THRESHOLDS = {
   VERY_SMALL: 200, // Images smaller than this in either dimension
   SMALL: 500, // Images smaller than this in either dimension
@@ -51,15 +51,14 @@ const SIZE_THRESHOLDS = {
   // Anything larger is considered LARGE
 }
 
-// Thresholds for aspect ratio classification
+// Thresholds for aspect ratio
 const ASPECT_RATIO_THRESHOLDS = {
   EXTREME: 3.0, // Aspect ratio greater than this is considered extreme
-  UNBALANCED: 2.0, // Aspect ratio greater than this is considered unbalanced
+  UNBALANCED: 1.5, // Aspect ratio greater than this is considered unbalanced
   // Anything closer to 1 is considered balanced
 }
 
-export default function ProductVisualizer({ productImage, productName, preload = true }: ProductVisualizerProps) {
-  const [debugMode, setDebugMode] = useState(false) // Set to true to see debug info
+export default function ProductVisualizer({ productImage, productName, preload = false }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const [loading, setLoading] = useState(true)
   const [textureReady, setTextureReady] = useState(false)
@@ -67,17 +66,9 @@ export default function ProductVisualizer({ productImage, productName, preload =
   const bookmatchedTextureRef = useRef<string | null>(null)
   const [backgroundSize, setBackgroundSize] = useState("400px 400px") // Default size
   const [backgroundPosition, setBackgroundPosition] = useState("center") // Default position
-  const [processingMethod, setProcessingMethod] = useState<string>("standard")
-  const [imageStats, setImageStats] = useState<{
-    width: number
-    height: number
-    aspectRatio: number
-    sizeCategory: string
-    aspectRatioCategory: string
-  } | null>(null)
   const [mockupImagesLoaded, setMockupImagesLoaded] = useState<Record<string, boolean>>({})
 
-  // Preload all mockup images
+  // Preload all mockup images if preload is true
   useEffect(() => {
     if (!preload) return
 
@@ -110,13 +101,14 @@ export default function ProductVisualizer({ productImage, productName, preload =
 
   // Remove artificial loading delay and rely on actual asset loading
   useEffect(() => {
-    // Check if all necessary assets are loaded
-    const allMockupsLoaded = Object.keys(mockupImagesLoaded).length === MOCKUPS.length
+    if (textureReady) {
+      const timer = setTimeout(() => {
+        setLoading(false)
+      }, 500) // Short delay to ensure smooth transition
 
-    if (textureReady && allMockupsLoaded) {
-      setLoading(false)
+      return () => clearTimeout(timer)
     }
-  }, [textureReady, mockupImagesLoaded])
+  }, [textureReady])
 
   // Helper function to classify image size
   const classifyImageSize = (width: number, height: number) => {
@@ -146,7 +138,7 @@ export default function ProductVisualizer({ productImage, productName, preload =
     let repetitionFactor = 1
 
     if (sizeCategory === "VERY_SMALL") {
-      repetitionFactor = 10
+      repetitionFactor = 8
     } else if (sizeCategory === "SMALL") {
       repetitionFactor = 6
     } else if (sizeCategory === "MEDIUM") {
@@ -157,9 +149,9 @@ export default function ProductVisualizer({ productImage, productName, preload =
 
     // Adjust based on aspect ratio
     if (aspectRatioCategory === "EXTREME") {
-      repetitionFactor += 4
-    } else if (aspectRatioCategory === "UNBALANCED") {
       repetitionFactor += 2
+    } else if (aspectRatioCategory === "UNBALANCED") {
+      repetitionFactor += 1
     }
 
     return repetitionFactor
@@ -170,25 +162,22 @@ export default function ProductVisualizer({ productImage, productName, preload =
     const sizeCategory = classifyImageSize(width, height)
     const aspectRatioCategory = classifyAspectRatio(width, height)
 
-    // Base size on the minimum dimension to ensure proper coverage
-    const minDimension = Math.min(width, height)
-
-    // For very small or small images, we want to show more repetitions
+    // For very small images, we want to show more repetitions
     // so we use a smaller background size
     if (sizeCategory === "VERY_SMALL") {
-      return `${minDimension * 2}px ${minDimension * 2}px`
+      return `${Math.max(width, height) * 2}px ${Math.max(width, height) * 2}px`
     } else if (sizeCategory === "SMALL") {
-      return `${minDimension * 3}px ${minDimension * 3}px`
-    } else if (aspectRatioCategory === "EXTREME" || aspectRatioCategory === "UNBALANCED") {
-      // For unbalanced aspect ratios, we want to show more repetitions
-      return `${minDimension * 4}px ${minDimension * 4}px`
+      return `${Math.max(width, height) * 3}px ${Math.max(width, height) * 3}px`
+    } else if (aspectRatioCategory === "EXTREME") {
+      // For extreme aspect ratios, we want to show more repetitions
+      return `${Math.max(width, height) * 2}px ${Math.max(width, height) * 2}px`
     } else {
       // For larger, balanced images, we can use a larger background size
-      return `${Math.max(width, height)}px ${Math.max(width, height)}px`
+      return `${Math.max(width, height) * 4}px ${Math.max(width, height) * 4}px`
     }
   }
 
-  // Enhanced bookmatched texture creation function
+  // Create a bookmatched texture from the product image
   const createBookmatchedTexture = (imageUrl: string) => {
     // If we already created the texture, don't recreate it
     if (bookmatchedTextureRef.current) {
@@ -201,16 +190,6 @@ export default function ProductVisualizer({ productImage, productName, preload =
     img.crossOrigin = "anonymous"
 
     img.onload = () => {
-      // Add error handling and logging to diagnose image loading issues
-      console.log("Image successfully loaded:", {
-        url: imageUrl,
-        width: img.width,
-        height: img.height,
-        complete: img.complete,
-        naturalWidth: img.naturalWidth,
-        naturalHeight: img.naturalHeight,
-      })
-
       // Check if image actually loaded with dimensions
       if (img.width === 0 || img.height === 0) {
         console.error("Image loaded but has zero dimensions:", imageUrl)
@@ -227,23 +206,6 @@ export default function ProductVisualizer({ productImage, productName, preload =
       const sizeCategory = classifyImageSize(originalWidth, originalHeight)
       const aspectRatioCategory = classifyAspectRatio(originalWidth, originalHeight)
 
-      // Store image stats for debugging
-      setImageStats({
-        width: originalWidth,
-        height: originalHeight,
-        aspectRatio: aspectRatio,
-        sizeCategory: sizeCategory,
-        aspectRatioCategory: aspectRatioCategory,
-      })
-
-      // Log detailed image information
-      console.log(`Product image analysis:`, {
-        dimensions: `${originalWidth}×${originalHeight}px`,
-        aspectRatio: aspectRatio.toFixed(2),
-        sizeCategory: sizeCategory,
-        aspectRatioCategory: aspectRatioCategory,
-      })
-
       // Create a canvas to manipulate the image
       const canvas = document.createElement("canvas")
       const ctx = canvas.getContext("2d")
@@ -253,20 +215,8 @@ export default function ProductVisualizer({ productImage, productName, preload =
         return
       }
 
-      // Determine the processing method based on image characteristics
-      let method = "standard"
-
+      // Determine if we need special handling for small or rectangular images
       if (sizeCategory === "VERY_SMALL" || aspectRatioCategory === "EXTREME") {
-        method = "super-enhanced"
-      } else if (sizeCategory === "SMALL" || aspectRatioCategory === "UNBALANCED") {
-        method = "enhanced"
-      }
-
-      setProcessingMethod(method)
-      console.log(`Using ${method} processing method`)
-
-      // Process the image based on the determined method
-      if (method === "super-enhanced") {
         // SUPER-ENHANCED METHOD FOR VERY SMALL OR EXTREME ASPECT RATIO IMAGES
 
         // Calculate repetition factor
@@ -329,13 +279,8 @@ export default function ProductVisualizer({ productImage, productName, preload =
               }
             }
           }
-
-          // Calculate optimal background size
-          const bgSize = calculateBackgroundSize(originalWidth, originalHeight)
-          setBackgroundSize(bgSize)
-          console.log(`Set background size to ${bgSize}`)
         }
-      } else if (method === "enhanced") {
+      } else if (sizeCategory === "SMALL" || aspectRatioCategory === "UNBALANCED") {
         // ENHANCED METHOD FOR SMALL OR UNBALANCED ASPECT RATIO IMAGES
 
         // Calculate repetition factor
@@ -378,11 +323,6 @@ export default function ProductVisualizer({ productImage, productName, preload =
             drawBookmatchedPattern(x * originalWidth, y * originalHeight)
           }
         }
-
-        // Calculate optimal background size
-        const bgSize = calculateBackgroundSize(originalWidth, originalHeight)
-        setBackgroundSize(bgSize)
-        console.log(`Set background size to ${bgSize}`)
       } else {
         // STANDARD METHOD FOR NORMAL-SIZED IMAGES
 
@@ -414,17 +354,15 @@ export default function ProductVisualizer({ productImage, productName, preload =
         ctx.scale(-1, -1)
         ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
         ctx.restore()
-
-        // Calculate optimal background size
-        const bgSize = calculateBackgroundSize(originalWidth, originalHeight)
-        setBackgroundSize(bgSize)
-        console.log(`Set background size to ${bgSize}`)
       }
 
+      // Calculate optimal background size
+      const bgSize = calculateBackgroundSize(originalWidth, originalHeight)
+      setBackgroundSize(bgSize)
       setBackgroundPosition("center")
 
       // Store the bookmatched texture with high quality
-      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.98)
+      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.95)
       setTextureReady(true)
     }
 
@@ -472,28 +410,6 @@ export default function ProductVisualizer({ productImage, productName, preload =
   return (
     <div className="w-full max-w-3xl mx-auto">
       <h2 className="text-xl font-bold mb-4">Product Visualizer</h2>
-
-      {/* Optional debug info - only shown when debugMode is true */}
-      {debugMode && imageStats && (
-        <div className="text-xs text-gray-500 mb-2">
-          <p>
-            Image: {imageStats.width}×{imageStats.height}px | Aspect ratio: {imageStats.aspectRatio.toFixed(2)} |
-            Processing: {processingMethod}
-          </p>
-        </div>
-      )}
-
-      {/* Hidden preload container for mockup images */}
-      <div className="hidden">
-        {MOCKUPS.map((mockup) => (
-          <img
-            key={`preload-${mockup.id}`}
-            src={mockup.src || "/placeholder.svg"}
-            alt=""
-            onLoad={() => setMockupImagesLoaded((prev) => ({ ...prev, [mockup.id]: true }))}
-          />
-        ))}
-      </div>
 
       <Tabs defaultValue={MOCKUPS[0].id} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-4">
