@@ -43,12 +43,20 @@ const MOCKUPS = [
   },
 ]
 
-// Update the MIN_IMAGE_SIZE constant to better detect small images
-const MIN_IMAGE_SIZE = 500 // Increased from 400 to catch more small images
+// Thresholds for image size classification
+const SIZE_THRESHOLDS = {
+  VERY_SMALL: 200, // Images smaller than this in either dimension
+  SMALL: 500, // Images smaller than this in either dimension
+  MEDIUM: 800, // Images smaller than this in either dimension
+  // Anything larger is considered LARGE
+}
 
-// Add these new constants for better image size detection
-const VERY_SMALL_IMAGE_SIZE = 200 // Images smaller than this will use super-enhanced method
-const EXTREME_ASPECT_RATIO = 2.5 // Reduced from 3 to catch more unbalanced images
+// Thresholds for aspect ratio classification
+const ASPECT_RATIO_THRESHOLDS = {
+  EXTREME: 3.0, // Aspect ratio greater than this is considered extreme
+  UNBALANCED: 2.0, // Aspect ratio greater than this is considered unbalanced
+  // Anything closer to 1 is considered balanced
+}
 
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
@@ -58,6 +66,14 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const bookmatchedTextureRef = useRef<string | null>(null)
   const [backgroundSize, setBackgroundSize] = useState("400px 400px") // Default size
   const [backgroundPosition, setBackgroundPosition] = useState("center") // Default position
+  const [processingMethod, setProcessingMethod] = useState<string>("standard")
+  const [imageStats, setImageStats] = useState<{
+    width: number
+    height: number
+    aspectRatio: number
+    sizeCategory: string
+    aspectRatioCategory: string
+  } | null>(null)
 
   // Create bookmatched texture as soon as component mounts
   useEffect(() => {
@@ -73,7 +89,77 @@ export default function ProductVisualizer({ productImage, productName }: Product
     return () => clearTimeout(timer)
   }, [])
 
-  // Update the createBookmatchedTexture function to better handle different image sizes
+  // Helper function to classify image size
+  const classifyImageSize = (width: number, height: number) => {
+    const minDimension = Math.min(width, height)
+
+    if (minDimension < SIZE_THRESHOLDS.VERY_SMALL) return "VERY_SMALL"
+    if (minDimension < SIZE_THRESHOLDS.SMALL) return "SMALL"
+    if (minDimension < SIZE_THRESHOLDS.MEDIUM) return "MEDIUM"
+    return "LARGE"
+  }
+
+  // Helper function to classify aspect ratio
+  const classifyAspectRatio = (width: number, height: number) => {
+    const aspectRatio = Math.max(width / height, height / width)
+
+    if (aspectRatio > ASPECT_RATIO_THRESHOLDS.EXTREME) return "EXTREME"
+    if (aspectRatio > ASPECT_RATIO_THRESHOLDS.UNBALANCED) return "UNBALANCED"
+    return "BALANCED"
+  }
+
+  // Calculate optimal repetition factor based on image dimensions
+  const calculateRepetitionFactor = (width: number, height: number) => {
+    const sizeCategory = classifyImageSize(width, height)
+    const aspectRatioCategory = classifyAspectRatio(width, height)
+
+    // Base repetition factor on size
+    let repetitionFactor = 1
+
+    if (sizeCategory === "VERY_SMALL") {
+      repetitionFactor = 10
+    } else if (sizeCategory === "SMALL") {
+      repetitionFactor = 6
+    } else if (sizeCategory === "MEDIUM") {
+      repetitionFactor = 4
+    } else {
+      repetitionFactor = 2
+    }
+
+    // Adjust based on aspect ratio
+    if (aspectRatioCategory === "EXTREME") {
+      repetitionFactor += 4
+    } else if (aspectRatioCategory === "UNBALANCED") {
+      repetitionFactor += 2
+    }
+
+    return repetitionFactor
+  }
+
+  // Calculate optimal background size based on image dimensions
+  const calculateBackgroundSize = (width: number, height: number) => {
+    const sizeCategory = classifyImageSize(width, height)
+    const aspectRatioCategory = classifyAspectRatio(width, height)
+
+    // Base size on the minimum dimension to ensure proper coverage
+    const minDimension = Math.min(width, height)
+
+    // For very small or small images, we want to show more repetitions
+    // so we use a smaller background size
+    if (sizeCategory === "VERY_SMALL") {
+      return `${minDimension * 2}px ${minDimension * 2}px`
+    } else if (sizeCategory === "SMALL") {
+      return `${minDimension * 3}px ${minDimension * 3}px`
+    } else if (aspectRatioCategory === "EXTREME" || aspectRatioCategory === "UNBALANCED") {
+      // For unbalanced aspect ratios, we want to show more repetitions
+      return `${minDimension * 4}px ${minDimension * 4}px`
+    } else {
+      // For larger, balanced images, we can use a larger background size
+      return `${Math.max(width, height)}px ${Math.max(width, height)}px`
+    }
+  }
+
+  // Enhanced bookmatched texture creation function
   const createBookmatchedTexture = (imageUrl: string) => {
     // If we already created the texture, don't recreate it
     if (bookmatchedTextureRef.current) {
@@ -86,8 +172,30 @@ export default function ProductVisualizer({ productImage, productName }: Product
     img.crossOrigin = "anonymous"
 
     img.onload = () => {
-      // Log image dimensions for debugging
-      console.log(`Product image loaded - Width: ${img.width}, Height: ${img.height}`)
+      const originalWidth = img.width
+      const originalHeight = img.height
+      const aspectRatio = originalWidth / originalHeight
+
+      // Classify the image
+      const sizeCategory = classifyImageSize(originalWidth, originalHeight)
+      const aspectRatioCategory = classifyAspectRatio(originalWidth, originalHeight)
+
+      // Store image stats for debugging
+      setImageStats({
+        width: originalWidth,
+        height: originalHeight,
+        aspectRatio: aspectRatio,
+        sizeCategory: sizeCategory,
+        aspectRatioCategory: aspectRatioCategory,
+      })
+
+      // Log detailed image information
+      console.log(`Product image analysis:`, {
+        dimensions: `${originalWidth}×${originalHeight}px`,
+        aspectRatio: aspectRatio.toFixed(2),
+        sizeCategory: sizeCategory,
+        aspectRatioCategory: aspectRatioCategory,
+      })
 
       // Create a canvas to manipulate the image
       const canvas = document.createElement("canvas")
@@ -98,28 +206,26 @@ export default function ProductVisualizer({ productImage, productName }: Product
         return
       }
 
-      const originalWidth = img.width
-      const originalHeight = img.height
+      // Determine the processing method based on image characteristics
+      let method = "standard"
 
-      // Log more detailed image characteristics for debugging
-      console.log(`Image aspect ratio: ${(originalWidth / originalHeight).toFixed(2)}`)
-      console.log(`Is small image: ${originalWidth < MIN_IMAGE_SIZE || originalHeight < MIN_IMAGE_SIZE}`)
+      if (sizeCategory === "VERY_SMALL" || aspectRatioCategory === "EXTREME") {
+        method = "super-enhanced"
+      } else if (sizeCategory === "SMALL" || aspectRatioCategory === "UNBALANCED") {
+        method = "enhanced"
+      }
 
-      // Enhanced detection for problematic images
-      const isSmallImage = originalWidth < MIN_IMAGE_SIZE || originalHeight < MIN_IMAGE_SIZE
-      const isVerySmallImage = originalWidth < VERY_SMALL_IMAGE_SIZE || originalHeight < VERY_SMALL_IMAGE_SIZE
-      const hasUnbalancedAspectRatio =
-        originalWidth / originalHeight > EXTREME_ASPECT_RATIO || originalHeight / originalWidth > EXTREME_ASPECT_RATIO
-      const isRectangular = Math.abs(originalWidth - originalHeight) > Math.min(originalWidth, originalHeight) * 0.3 // Reduced from 0.5
+      setProcessingMethod(method)
+      console.log(`Using ${method} processing method`)
 
-      // Determine the approach based on image characteristics
-      if (isVerySmallImage || hasUnbalancedAspectRatio) {
-        console.log("Using super-enhanced method for very small or unbalanced image")
+      // Process the image based on the determined method
+      if (method === "super-enhanced") {
+        // SUPER-ENHANCED METHOD FOR VERY SMALL OR EXTREME ASPECT RATIO IMAGES
 
-        // SUPER-ENHANCED METHOD FOR VERY SMALL OR UNBALANCED IMAGES
-        // Create a normalized square version of the image first
+        // Calculate repetition factor
+        const repetitionFactor = calculateRepetitionFactor(originalWidth, originalHeight)
 
-        // Create a temporary square canvas to normalize the image
+        // Create a normalized square version of the image
         const normalSize = Math.max(originalWidth, originalHeight)
         const tempCanvas = document.createElement("canvas")
         tempCanvas.width = normalSize
@@ -134,10 +240,9 @@ export default function ProductVisualizer({ productImage, productName }: Product
           // Draw the original image centered in the square canvas
           tempCtx.drawImage(img, offsetX, offsetY, originalWidth, originalHeight)
 
-          // Now create a large grid of bookmatched patterns (8x8 instead of 6x6)
-          const gridSize = 8
-          canvas.width = normalSize * gridSize
-          canvas.height = normalSize * gridSize
+          // Create a large grid of bookmatched patterns
+          canvas.width = normalSize * repetitionFactor
+          canvas.height = normalSize * repetitionFactor
 
           // Create a 2x2 bookmatched pattern from the normalized image
           const patternCanvas = document.createElement("canvas")
@@ -178,21 +283,20 @@ export default function ProductVisualizer({ productImage, productName }: Product
             }
           }
 
-          // Set a background size that ensures good coverage
-          // For very small images, use a smaller background size to show more repetitions
-          const bgSize = Math.min(normalSize, 300) * 2
-          setBackgroundSize(`${bgSize}px ${bgSize}px`)
+          // Calculate optimal background size
+          const bgSize = calculateBackgroundSize(originalWidth, originalHeight)
+          setBackgroundSize(bgSize)
+          console.log(`Set background size to ${bgSize}`)
         }
-      } else if (isSmallImage || isRectangular) {
-        console.log("Using enhanced method for small or rectangular image")
+      } else if (method === "enhanced") {
+        // ENHANCED METHOD FOR SMALL OR UNBALANCED ASPECT RATIO IMAGES
 
-        // ENHANCED METHOD FOR SMALL OR RECTANGULAR IMAGES
-        // Create a 6x6 grid of bookmatched patterns (increased from 4x4)
-        const gridSize = 6
+        // Calculate repetition factor
+        const repetitionFactor = calculateRepetitionFactor(originalWidth, originalHeight)
 
         // Set canvas size to accommodate the grid
-        canvas.width = originalWidth * gridSize
-        canvas.height = originalHeight * gridSize
+        canvas.width = originalWidth * repetitionFactor
+        canvas.height = originalHeight * repetitionFactor
 
         // Function to draw a single bookmatched pattern (2x2) at a specific position
         const drawBookmatchedPattern = (startX: number, startY: number) => {
@@ -222,20 +326,19 @@ export default function ProductVisualizer({ productImage, productName }: Product
         }
 
         // Draw multiple bookmatched patterns in a grid
-        for (let y = 0; y < gridSize; y += 2) {
-          for (let x = 0; x < gridSize; x += 2) {
+        for (let y = 0; y < repetitionFactor; y += 2) {
+          for (let x = 0; x < repetitionFactor; x += 2) {
             drawBookmatchedPattern(x * originalWidth, y * originalHeight)
           }
         }
 
-        // Set a background size that ensures good coverage
-        // For small images, use a smaller background size to show more repetitions
-        const patternSize = Math.min(originalWidth, originalHeight, 350) * 2
-        setBackgroundSize(`${patternSize}px ${patternSize}px`)
+        // Calculate optimal background size
+        const bgSize = calculateBackgroundSize(originalWidth, originalHeight)
+        setBackgroundSize(bgSize)
+        console.log(`Set background size to ${bgSize}`)
       } else {
-        console.log("Using standard method for normal-sized image")
-
         // STANDARD METHOD FOR NORMAL-SIZED IMAGES
+
         // Set canvas size to 2x the image size to fit the bookmatched pattern
         const patternSize = Math.max(originalWidth, originalHeight) * 2
         canvas.width = patternSize
@@ -265,8 +368,10 @@ export default function ProductVisualizer({ productImage, productName }: Product
         ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
         ctx.restore()
 
-        // Use a background size that ensures the pattern is visible but not too small
-        setBackgroundSize(`${patternSize / 2}px ${patternSize / 2}px`)
+        // Calculate optimal background size
+        const bgSize = calculateBackgroundSize(originalWidth, originalHeight)
+        setBackgroundSize(bgSize)
+        console.log(`Set background size to ${bgSize}`)
       }
 
       setBackgroundPosition("center")
@@ -293,10 +398,19 @@ export default function ProductVisualizer({ productImage, productName }: Product
     }
   }
 
-  // Update the return JSX to add a more responsive container and better image rendering
   return (
     <div className="w-full max-w-3xl mx-auto">
       <h2 className="text-xl font-bold mb-4">Product Visualizer</h2>
+
+      {/* Optional debug info - can be removed in production */}
+      {imageStats && (
+        <div className="text-xs text-gray-500 mb-2">
+          <p>
+            Image: {imageStats.width}×{imageStats.height}px | Aspect ratio: {imageStats.aspectRatio.toFixed(2)} |
+            Processing: {processingMethod}
+          </p>
+        </div>
+      )}
 
       <Tabs defaultValue={MOCKUPS[0].id} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-4">
@@ -338,7 +452,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
                           maxWidth: "100%",
                           height: "auto",
                           maxHeight: "500px",
-                          objectFit: "contain", // Ensure the image maintains its aspect ratio
+                          objectFit: "contain",
                         }}
                         onError={(e) => {
                           e.currentTarget.src =
