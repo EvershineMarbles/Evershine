@@ -43,8 +43,12 @@ const MOCKUPS = [
   },
 ]
 
-// Minimum dimensions we want to ensure for good coverage
-const MIN_IMAGE_SIZE = 400 // Images smaller than this will use the enhanced method
+// Update the MIN_IMAGE_SIZE constant to better detect small images
+const MIN_IMAGE_SIZE = 500 // Increased from 400 to catch more small images
+
+// Add these new constants for better image size detection
+const VERY_SMALL_IMAGE_SIZE = 200 // Images smaller than this will use super-enhanced method
+const EXTREME_ASPECT_RATIO = 2.5 // Reduced from 3 to catch more unbalanced images
 
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
@@ -69,7 +73,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
     return () => clearTimeout(timer)
   }, [])
 
-  // Create a bookmatched texture from the product image
+  // Update the createBookmatchedTexture function to better handle different image sizes
   const createBookmatchedTexture = (imageUrl: string) => {
     // If we already created the texture, don't recreate it
     if (bookmatchedTextureRef.current) {
@@ -97,11 +101,16 @@ export default function ProductVisualizer({ productImage, productName }: Product
       const originalWidth = img.width
       const originalHeight = img.height
 
+      // Log more detailed image characteristics for debugging
+      console.log(`Image aspect ratio: ${(originalWidth / originalHeight).toFixed(2)}`)
+      console.log(`Is small image: ${originalWidth < MIN_IMAGE_SIZE || originalHeight < MIN_IMAGE_SIZE}`)
+
       // Enhanced detection for problematic images
       const isSmallImage = originalWidth < MIN_IMAGE_SIZE || originalHeight < MIN_IMAGE_SIZE
-      const isVerySmallImage = originalWidth < 100 || originalHeight < 100
-      const hasUnbalancedAspectRatio = originalWidth / originalHeight > 3 || originalHeight / originalWidth > 3
-      const isRectangular = Math.abs(originalWidth - originalHeight) > Math.min(originalWidth, originalHeight) * 0.5
+      const isVerySmallImage = originalWidth < VERY_SMALL_IMAGE_SIZE || originalHeight < VERY_SMALL_IMAGE_SIZE
+      const hasUnbalancedAspectRatio =
+        originalWidth / originalHeight > EXTREME_ASPECT_RATIO || originalHeight / originalWidth > EXTREME_ASPECT_RATIO
+      const isRectangular = Math.abs(originalWidth - originalHeight) > Math.min(originalWidth, originalHeight) * 0.3 // Reduced from 0.5
 
       // Determine the approach based on image characteristics
       if (isVerySmallImage || hasUnbalancedAspectRatio) {
@@ -125,8 +134,8 @@ export default function ProductVisualizer({ productImage, productName }: Product
           // Draw the original image centered in the square canvas
           tempCtx.drawImage(img, offsetX, offsetY, originalWidth, originalHeight)
 
-          // Now create a large grid of bookmatched patterns (6x6)
-          const gridSize = 6
+          // Now create a large grid of bookmatched patterns (8x8 instead of 6x6)
+          const gridSize = 8
           canvas.width = normalSize * gridSize
           canvas.height = normalSize * gridSize
 
@@ -170,14 +179,16 @@ export default function ProductVisualizer({ productImage, productName }: Product
           }
 
           // Set a background size that ensures good coverage
-          setBackgroundSize(`${normalSize * 2}px ${normalSize * 2}px`)
+          // For very small images, use a smaller background size to show more repetitions
+          const bgSize = Math.min(normalSize, 300) * 2
+          setBackgroundSize(`${bgSize}px ${bgSize}px`)
         }
       } else if (isSmallImage || isRectangular) {
         console.log("Using enhanced method for small or rectangular image")
 
         // ENHANCED METHOD FOR SMALL OR RECTANGULAR IMAGES
-        // Create a 4x4 grid of bookmatched patterns
-        const gridSize = 4
+        // Create a 6x6 grid of bookmatched patterns (increased from 4x4)
+        const gridSize = 6
 
         // Set canvas size to accommodate the grid
         canvas.width = originalWidth * gridSize
@@ -218,7 +229,8 @@ export default function ProductVisualizer({ productImage, productName }: Product
         }
 
         // Set a background size that ensures good coverage
-        const patternSize = Math.min(originalWidth, originalHeight) * 2
+        // For small images, use a smaller background size to show more repetitions
+        const patternSize = Math.min(originalWidth, originalHeight, 350) * 2
         setBackgroundSize(`${patternSize}px ${patternSize}px`)
       } else {
         console.log("Using standard method for normal-sized image")
@@ -264,8 +276,8 @@ export default function ProductVisualizer({ productImage, productName }: Product
       setTextureReady(true)
     }
 
-    img.onerror = () => {
-      console.error("Error loading product image for bookmatching")
+    img.onerror = (error) => {
+      console.error("Error loading product image for bookmatching:", error)
       // Fallback to original image if there's an error
       bookmatchedTextureRef.current = imageUrl
       setTextureReady(true)
@@ -281,6 +293,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
     }
   }
 
+  // Update the return JSX to add a more responsive container and better image rendering
   return (
     <div className="w-full max-w-3xl mx-auto">
       <h2 className="text-xl font-bold mb-4">Product Visualizer</h2>
@@ -311,19 +324,22 @@ export default function ProductVisualizer({ productImage, productName }: Product
                         backgroundRepeat: "repeat",
                         backgroundSize: backgroundSize,
                         backgroundPosition: backgroundPosition,
-                        imageRendering: "auto", // Changed from "high-quality" to "auto"
                       }}
                     >
                       <img
                         src={
                           mockup.src ||
                           "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E" ||
-                          "/placeholder.svg" ||
                           "/placeholder.svg"
                         }
                         alt={`${mockup.name} mockup with ${productName}`}
                         className="block"
-                        style={{ maxWidth: "100%", height: "auto", maxHeight: "500px" }}
+                        style={{
+                          maxWidth: "100%",
+                          height: "auto",
+                          maxHeight: "500px",
+                          objectFit: "contain", // Ensure the image maintains its aspect ratio
+                        }}
                         onError={(e) => {
                           e.currentTarget.src =
                             "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' strokeWidth='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
