@@ -43,8 +43,7 @@ const MOCKUPS = [
 ]
 
 // Minimum dimensions we want to ensure for good coverage
-const MIN_PATTERN_HEIGHT = 1500
-const MIN_PATTERN_WIDTH = 1500
+const MIN_IMAGE_SIZE = 650 // Images smaller than this will use the enhanced method
 
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
@@ -90,60 +89,95 @@ export default function ProductVisualizer({ productImage, productName }: Product
         return
       }
 
-      // Calculate the pattern size based on the image dimensions
-      // For smaller images, we'll create a larger pattern by repeating more
       const originalWidth = img.width
       const originalHeight = img.height
 
-      // Calculate how many times we need to repeat the pattern to reach minimum dimensions
-      // We'll create a 2x2 grid at minimum, but might need more repetitions for small images
-      const repeatX = Math.max(2, Math.ceil(MIN_PATTERN_WIDTH / (originalWidth * 2)))
-      const repeatY = Math.max(2, Math.ceil(MIN_PATTERN_HEIGHT / (originalHeight * 2)))
+      // Determine if we need to use the enhanced method for small images
+      const isSmallImage = originalWidth < MIN_IMAGE_SIZE || originalHeight < MIN_IMAGE_SIZE
 
-      // Set canvas size to accommodate the repeated pattern
-      const patternWidth = originalWidth * repeatX
-      const patternHeight = originalHeight * repeatY
+      if (isSmallImage) {
+        // ENHANCED METHOD FOR SMALL IMAGES
+        // Calculate how many times we need to repeat the pattern to reach minimum dimensions
+        const repeatX = Math.max(2, Math.ceil(1500 / (originalWidth * 2)))
+        const repeatY = Math.max(2, Math.ceil(1500 / (originalHeight * 2)))
 
-      canvas.width = patternWidth
-      canvas.height = patternHeight
+        // Set canvas size to accommodate the repeated pattern
+        const patternWidth = originalWidth * repeatX
+        const patternHeight = originalHeight * repeatY
 
-      // Function to draw the image with flipping options
-      const drawImage = (x: number, y: number, flipX: boolean, flipY: boolean) => {
+        canvas.width = patternWidth
+        canvas.height = patternHeight
+
+        // Function to draw the image with flipping options
+        const drawImage = (x: number, y: number, flipX: boolean, flipY: boolean) => {
+          ctx.save()
+          ctx.translate(x, y)
+          if (flipX) {
+            ctx.translate(originalWidth, 0)
+            ctx.scale(-1, 1)
+          }
+          if (flipY) {
+            ctx.translate(0, originalHeight)
+            ctx.scale(1, -1)
+          }
+          ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+          ctx.restore()
+        }
+
+        // Create the bookmatched pattern by repeating in a grid
+        for (let y = 0; y < repeatY; y += 2) {
+          for (let x = 0; x < repeatX; x += 2) {
+            // Original image in top-left
+            drawImage(x * originalWidth, y * originalHeight, false, false)
+
+            // Horizontally flipped in top-right
+            drawImage((x + 1) * originalWidth, y * originalHeight, true, false)
+
+            // Vertically flipped in bottom-left
+            drawImage(x * originalWidth, (y + 1) * originalHeight, false, true)
+
+            // Both horizontally and vertically flipped in bottom-right
+            drawImage((x + 1) * originalWidth, (y + 1) * originalHeight, true, true)
+          }
+        }
+
+        // Calculate appropriate background size for CSS
+        const bgSize = Math.max(400, Math.min(originalWidth, originalHeight) * 2)
+        setBackgroundSize(`${bgSize}px ${bgSize}px`)
+      } else {
+        // ORIGINAL METHOD FOR ADEQUATELY SIZED IMAGES
+        // Set canvas size to 2x the image size to fit the bookmatched pattern
+        const patternSize = Math.max(img.width, img.height) * 2
+        canvas.width = patternSize
+        canvas.height = patternSize
+
+        // Draw the original image in the top-left quadrant
+        ctx.drawImage(img, 0, 0, img.width, img.height)
+
+        // Draw horizontally flipped image in top-right quadrant
         ctx.save()
-        ctx.translate(x, y)
-        if (flipX) {
-          ctx.translate(originalWidth, 0)
-          ctx.scale(-1, 1)
-        }
-        if (flipY) {
-          ctx.translate(0, originalHeight)
-          ctx.scale(1, -1)
-        }
-        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+        ctx.translate(patternSize, 0)
+        ctx.scale(-1, 1)
+        ctx.drawImage(img, 0, 0, img.width, img.height)
         ctx.restore()
+
+        // Draw vertically flipped image in bottom-left quadrant
+        ctx.save()
+        ctx.translate(0, patternSize)
+        ctx.scale(1, -1)
+        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.restore()
+
+        // Draw both horizontally and vertically flipped image in bottom-right quadrant
+        ctx.save()
+        ctx.translate(patternSize, patternSize)
+        ctx.scale(-1, -1)
+        ctx.drawImage(img, 0, 0, img.width, img.height)
+        ctx.restore()
+
+        // Use the original background size for larger images
+        setBackgroundSize("400px 400px")
       }
-
-      // Create the bookmatched pattern by repeating in a grid
-      for (let y = 0; y < repeatY; y += 2) {
-        for (let x = 0; x < repeatX; x += 2) {
-          // Original image in top-left
-          drawImage(x * originalWidth, y * originalHeight, false, false)
-
-          // Horizontally flipped in top-right
-          drawImage((x + 1) * originalWidth, y * originalHeight, true, false)
-
-          // Vertically flipped in bottom-left
-          drawImage(x * originalWidth, (y + 1) * originalHeight, false, true)
-
-          // Both horizontally and vertically flipped in bottom-right
-          drawImage((x + 1) * originalWidth, (y + 1) * originalHeight, true, true)
-        }
-      }
-
-      // Calculate appropriate background size for CSS
-      // For smaller images, we want to ensure the pattern is large enough to cover the area
-      const bgSize = Math.max(400, Math.min(originalWidth, originalHeight) * 2)
-      setBackgroundSize(`${bgSize}px ${bgSize}px`)
 
       // Store the bookmatched texture
       bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg")
