@@ -44,7 +44,7 @@ const MOCKUPS = [
 ]
 
 // Minimum dimensions we want to ensure for good coverage
-const MIN_IMAGE_SIZE = 650 // Images smaller than this will use the enhanced method
+const MIN_IMAGE_SIZE = 400 // Images smaller than this will use the enhanced method
 
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
@@ -82,6 +82,9 @@ export default function ProductVisualizer({ productImage, productName }: Product
     img.crossOrigin = "anonymous"
 
     img.onload = () => {
+      // Add debug logging for image dimensions
+      console.log(`Product image loaded - Width: ${img.width}, Height: ${img.height}`)
+
       // Create a canvas to manipulate the image
       const canvas = document.createElement("canvas")
       const ctx = canvas.getContext("2d")
@@ -94,76 +97,79 @@ export default function ProductVisualizer({ productImage, productName }: Product
       const originalWidth = img.width
       const originalHeight = img.height
 
-      // Determine if we need to use the enhanced method for small images
+      // Enhanced detection for small images - check both dimensions and aspect ratio
       const isSmallImage = originalWidth < MIN_IMAGE_SIZE || originalHeight < MIN_IMAGE_SIZE
+      const hasUnbalancedAspectRatio = originalWidth / originalHeight > 3 || originalHeight / originalWidth > 3
 
-      if (isSmallImage) {
-        // ENHANCED METHOD FOR SMALL IMAGES
-        // Create a larger, more detailed bookmatched pattern
+      if (isSmallImage || hasUnbalancedAspectRatio) {
+        console.log("Using enhanced method for small or unbalanced image")
 
-        // Create a 2x2 bookmatched pattern first
-        const basePatternSize = Math.max(originalWidth, originalHeight) * 2
+        // ENHANCED METHOD FOR SMALL OR UNBALANCED IMAGES
+        // Create a more detailed pattern with more repetitions
 
-        // Then repeat it 2x2 times for more detail without excessive scaling
-        canvas.width = basePatternSize * 2
-        canvas.height = basePatternSize * 2
+        // Determine the base size for our pattern
+        const baseSize = Math.max(originalWidth, originalHeight)
 
-        // Create the base 2x2 bookmatched pattern
-        const createBasePattern = () => {
+        // For very small images, we'll create an even larger pattern
+        const repetitionFactor = Math.min(4, Math.ceil(MIN_IMAGE_SIZE / baseSize))
+        const patternSize = baseSize * repetitionFactor
+
+        // Create a canvas large enough for our enhanced pattern
+        canvas.width = patternSize * 2
+        canvas.height = patternSize * 2
+
+        // First create a single bookmatched tile
+        const createBasicBookmatchTile = (x: number, y: number, size: number) => {
           // Original image in top-left
-          ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+          ctx.drawImage(img, x, y, originalWidth, originalHeight)
 
-          // Horizontally flipped in top-right
+          // Horizontally flipped
           ctx.save()
-          ctx.translate(originalWidth * 2, 0)
+          ctx.translate(x + originalWidth * 2, y)
           ctx.scale(-1, 1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
 
-          // Vertically flipped in bottom-left
+          // Vertically flipped
           ctx.save()
-          ctx.translate(0, originalHeight * 2)
+          ctx.translate(x, y + originalHeight * 2)
           ctx.scale(1, -1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
 
-          // Both horizontally and vertically flipped in bottom-right
+          // Both horizontally and vertically flipped
           ctx.save()
-          ctx.translate(originalWidth * 2, originalHeight * 2)
+          ctx.translate(x + originalWidth * 2, y + originalHeight * 2)
           ctx.scale(-1, -1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
         }
 
-        // Create the base pattern
-        createBasePattern()
-
-        // Now create a temporary canvas with just the base pattern
+        // Create a temporary canvas with a basic bookmatched tile
         const tempCanvas = document.createElement("canvas")
-        tempCanvas.width = basePatternSize
-        tempCanvas.height = basePatternSize
+        tempCanvas.width = originalWidth * 2
+        tempCanvas.height = originalHeight * 2
         const tempCtx = tempCanvas.getContext("2d")
 
         if (tempCtx) {
-          // Copy the base pattern to the temp canvas
-          tempCtx.drawImage(canvas, 0, 0, basePatternSize, basePatternSize, 0, 0, basePatternSize, basePatternSize)
+          // Create the basic bookmatched tile on the temp canvas
+          createBasicBookmatchTile(0, 0, originalWidth)
 
-          // Now use this base pattern to create a larger seamless pattern
-          // Top-left
-          ctx.drawImage(tempCanvas, 0, 0)
+          // Now use this basic tile to fill our larger canvas with a repeating pattern
+          const tileWidth = originalWidth * 2
+          const tileHeight = originalHeight * 2
 
-          // Top-right
-          ctx.drawImage(tempCanvas, basePatternSize, 0)
-
-          // Bottom-left
-          ctx.drawImage(tempCanvas, 0, basePatternSize)
-
-          // Bottom-right
-          ctx.drawImage(tempCanvas, basePatternSize, basePatternSize)
+          // Fill the canvas with repeated tiles
+          for (let y = 0; y < canvas.height; y += tileHeight) {
+            for (let x = 0; x < canvas.width; x += tileWidth) {
+              ctx.drawImage(tempCanvas, x, y, tileWidth, tileHeight)
+            }
+          }
         }
 
-        // Set a smaller background size to maintain quality
-        setBackgroundSize(`${basePatternSize}px ${basePatternSize}px`)
+        // Set a background size that ensures good coverage without being too small
+        const backgroundSizeValue = Math.min(canvas.width, canvas.height) / 2
+        setBackgroundSize(`${backgroundSizeValue}px ${backgroundSizeValue}px`)
         setBackgroundPosition("center")
       } else {
         // ORIGINAL METHOD FOR ADEQUATELY SIZED IMAGES
@@ -259,7 +265,8 @@ export default function ProductVisualizer({ productImage, productName }: Product
                       <img
                         src={
                           mockup.src ||
-                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
+                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E" ||
+                          "/placeholder.svg"
                         }
                         alt={`${mockup.name} mockup with ${productName}`}
                         className="block"
