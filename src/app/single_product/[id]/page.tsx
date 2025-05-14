@@ -687,7 +687,7 @@ function ProductDetail() {
           {/* Product Visualizer Section */}
           {showVisualizer && product.image.length > 0 && (
             <div className="max-w-6xl mx-auto mt-12 border-t pt-8">
-              <ProductVisualizer productImage={product.image[0]} productName={product.name} preload={true} />
+              <ProductVisualizer productImage={product.image[0]} productName={product.name}  />
             </div>
           )}
 

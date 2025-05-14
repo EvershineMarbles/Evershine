@@ -6,7 +6,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 interface ProductVisualizerProps {
   productImage: string
   productName: string
-  preload?: boolean // Optional prop to control preloading behavior
 }
 
 // Define mockup rooms
@@ -17,9 +16,9 @@ const MOCKUPS = [
     src: "/assets/mockups/bathroom.png",
   },
   {
-    id: "modern-bedroom",
-    name: "Modern Bedroom",
-    src: "/assets/mockups/modern-bedroom.png",
+    id: "bedroom-green",
+    name: "Bedroom",
+    src: "/assets/mockups/bedroom-green.png",
   },
   {
     id: "living-room",
@@ -32,9 +31,9 @@ const MOCKUPS = [
     src: "/assets/mockups/luxury-living.png",
   },
   {
-    id: "bedroom-green",
-    name: "Bedroom",
-    src: "/assets/mockups/bedroom-green.png",
+    id: "modern-bedroom",
+    name: "Modern Bedroom",
+    src: "/assets/mockups/modern-bedroom.png",
   },
   {
     id: "minimalist",
@@ -44,7 +43,7 @@ const MOCKUPS = [
 ]
 
 // Minimum dimensions we want to ensure for good coverage
-const MIN_IMAGE_SIZE = 400 // Images smaller than this will use the enhanced method
+const MIN_IMAGE_SIZE = 650 // Images smaller than this will use the enhanced method
 
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
@@ -82,9 +81,6 @@ export default function ProductVisualizer({ productImage, productName }: Product
     img.crossOrigin = "anonymous"
 
     img.onload = () => {
-      // Add debug logging for image dimensions
-      console.log(`Product image loaded - Width: ${img.width}, Height: ${img.height}`)
-
       // Create a canvas to manipulate the image
       const canvas = document.createElement("canvas")
       const ctx = canvas.getContext("2d")
@@ -97,118 +93,99 @@ export default function ProductVisualizer({ productImage, productName }: Product
       const originalWidth = img.width
       const originalHeight = img.height
 
-      // Enhanced detection for small images - check both dimensions and aspect ratio
+      // Determine if we need to use the enhanced method for small images
       const isSmallImage = originalWidth < MIN_IMAGE_SIZE || originalHeight < MIN_IMAGE_SIZE
-      const hasUnbalancedAspectRatio = originalWidth / originalHeight > 3 || originalHeight / originalWidth > 3
 
-      if (isSmallImage || hasUnbalancedAspectRatio) {
-        console.log("Using enhanced method for small or unbalanced image")
+      if (isSmallImage) {
+        // ENHANCED METHOD FOR SMALL IMAGES
+        // Instead of scaling up too much, we'll create a more detailed pattern
+        // with more repetitions but at a smaller scale to maintain quality
 
-        // ENHANCED METHOD FOR SMALL OR UNBALANCED IMAGES
-        // Create a more detailed pattern with more repetitions
+        // For small images, we'll create a 4x4 grid of bookmatched patterns
+        // This gives us more coverage without excessive scaling
+        const gridSize = 4 // 4x4 grid
 
-        // Determine the base size for our pattern
-        const baseSize = Math.max(originalWidth, originalHeight)
+        // Set canvas size to accommodate the grid
+        canvas.width = originalWidth * gridSize
+        canvas.height = originalHeight * gridSize
 
-        // For very small images, we'll create an even larger pattern
-        const repetitionFactor = Math.min(4, Math.ceil(MIN_IMAGE_SIZE / baseSize))
-        const patternSize = baseSize * repetitionFactor
-
-        // Create a canvas large enough for our enhanced pattern
-        canvas.width = patternSize * 2
-        canvas.height = patternSize * 2
-
-        // First create a single bookmatched tile
-        const createBasicBookmatchTile = (x: number, y: number, size: number) => {
+        // Function to draw a single bookmatched pattern (2x2) at a specific position
+        const drawBookmatchedPattern = (startX: number, startY: number) => {
           // Original image in top-left
-          ctx.drawImage(img, x, y, originalWidth, originalHeight)
+          ctx.drawImage(img, startX, startY, originalWidth, originalHeight)
 
-          // Horizontally flipped
+          // Horizontally flipped in top-right
           ctx.save()
-          ctx.translate(x + originalWidth * 2, y)
+          ctx.translate(startX + originalWidth * 2, startY)
           ctx.scale(-1, 1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
 
-          // Vertically flipped
+          // Vertically flipped in bottom-left
           ctx.save()
-          ctx.translate(x, y + originalHeight * 2)
+          ctx.translate(startX, startY + originalHeight * 2)
           ctx.scale(1, -1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
 
-          // Both horizontally and vertically flipped
+          // Both horizontally and vertically flipped in bottom-right
           ctx.save()
-          ctx.translate(x + originalWidth * 2, y + originalHeight * 2)
+          ctx.translate(startX + originalWidth * 2, startY + originalHeight * 2)
           ctx.scale(-1, -1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
         }
 
-        // Create a temporary canvas with a basic bookmatched tile
-        const tempCanvas = document.createElement("canvas")
-        tempCanvas.width = originalWidth * 2
-        tempCanvas.height = originalHeight * 2
-        const tempCtx = tempCanvas.getContext("2d")
-
-        if (tempCtx) {
-          // Create the basic bookmatched tile on the temp canvas
-          createBasicBookmatchTile(0, 0, originalWidth)
-
-          // Now use this basic tile to fill our larger canvas with a repeating pattern
-          const tileWidth = originalWidth * 2
-          const tileHeight = originalHeight * 2
-
-          // Fill the canvas with repeated tiles
-          for (let y = 0; y < canvas.height; y += tileHeight) {
-            for (let x = 0; x < canvas.width; x += tileWidth) {
-              ctx.drawImage(tempCanvas, x, y, tileWidth, tileHeight)
-            }
+        // Draw multiple bookmatched patterns in a grid
+        for (let y = 0; y < gridSize; y += 2) {
+          for (let x = 0; x < gridSize; x += 2) {
+            drawBookmatchedPattern(x * originalWidth, y * originalHeight)
           }
         }
 
-        // Set a background size that ensures good coverage without being too small
-        const backgroundSizeValue = Math.min(canvas.width, canvas.height) / 2
-        setBackgroundSize(`${backgroundSizeValue}px ${backgroundSizeValue}px`)
+        // Set a smaller background size to maintain quality
+        // We'll use a tiling approach rather than scaling
+        const patternSize = Math.min(originalWidth, originalHeight) * 2
+        setBackgroundSize(`${patternSize}px ${patternSize}px`)
         setBackgroundPosition("center")
       } else {
         // ORIGINAL METHOD FOR ADEQUATELY SIZED IMAGES
-        // Create a classic bookmatched pattern
-        const patternSize = Math.max(originalWidth, originalHeight) * 2
+        // Set canvas size to 2x the image size to fit the bookmatched pattern
+        const patternSize = Math.max(img.width, img.height) * 2
         canvas.width = patternSize
         canvas.height = patternSize
 
         // Draw the original image in the top-left quadrant
-        ctx.drawImage(img, 0, 0)
+        ctx.drawImage(img, 0, 0, img.width, img.height)
 
         // Draw horizontally flipped image in top-right quadrant
         ctx.save()
         ctx.translate(patternSize, 0)
         ctx.scale(-1, 1)
-        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+        ctx.drawImage(img, 0, 0, img.width, img.height)
         ctx.restore()
 
         // Draw vertically flipped image in bottom-left quadrant
         ctx.save()
         ctx.translate(0, patternSize)
         ctx.scale(1, -1)
-        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+        ctx.drawImage(img, 0, 0, img.width, img.height)
         ctx.restore()
 
         // Draw both horizontally and vertically flipped image in bottom-right quadrant
         ctx.save()
         ctx.translate(patternSize, patternSize)
         ctx.scale(-1, -1)
-        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+        ctx.drawImage(img, 0, 0, img.width, img.height)
         ctx.restore()
 
-        // Use a background size that ensures the pattern is visible but not too small
-        setBackgroundSize(`${patternSize / 2}px ${patternSize / 2}px`)
+        // Use the original background size for larger images
+        setBackgroundSize("400px 400px")
         setBackgroundPosition("center")
       }
 
-      // Store the bookmatched texture with high quality
-      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.98) // Higher quality JPEG
+      // Store the bookmatched texture
+      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.95) // Higher quality JPEG
       setTextureReady(true)
     }
 
@@ -263,17 +240,12 @@ export default function ProductVisualizer({ productImage, productName }: Product
                       }}
                     >
                       <img
-                        src={
-                          mockup.src ||
-                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' stroke-width='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E" ||
-                          "/placeholder.svg"
-                        }
+                        src={mockup.src || "/placeholder.svg"}
                         alt={`${mockup.name} mockup with ${productName}`}
                         className="block"
                         style={{ maxWidth: "100%", height: "auto", maxHeight: "500px" }}
                         onError={(e) => {
-                          e.currentTarget.src =
-                            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Cpath d='M30 40 L50 65 L70 40' stroke='%23cccccc' strokeWidth='2' fill='none'/%3E%3Ccircle cx='50' cy='30' r='10' fill='%23cccccc'/%3E%3C/svg%3E"
+                          e.currentTarget.src = "/placeholder.svg"
                         }}
                       />
                     </div>
