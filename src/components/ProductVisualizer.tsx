@@ -62,13 +62,13 @@ export default function ProductVisualizer({ productImage, productName }: Product
   }
 
   return (
-    <div className="w-full">
-      <h2 className="text-2xl font-bold mb-6">Product Visualizer</h2>
+    <div className="w-full max-w-3xl mx-auto">
+      <h2 className="text-xl font-bold mb-4">Product Visualizer</h2>
 
       <Tabs defaultValue={MOCKUPS[0].id} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-6">
+        <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-4">
           {MOCKUPS.map((mockup) => (
-            <TabsTrigger key={mockup.id} value={mockup.id} className="text-sm">
+            <TabsTrigger key={mockup.id} value={mockup.id} className="text-xs">
               {mockup.name}
             </TabsTrigger>
           ))}
@@ -76,16 +76,16 @@ export default function ProductVisualizer({ productImage, productName }: Product
 
         {MOCKUPS.map((mockup) => (
           <TabsContent key={mockup.id} value={mockup.id} className="mt-0">
-            <div className="border rounded-lg p-4 bg-gray-50">
+            <div className="border rounded-lg p-2 bg-gray-50">
               <div className="relative rounded-lg overflow-hidden bg-white border">
                 {loading ? (
-                  <div className="flex items-center justify-center h-[300px]">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#194a95]"></div>
+                  <div className="flex items-center justify-center h-[200px]">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#194a95]"></div>
                   </div>
                 ) : (
                   <div className="flex justify-center">
                     <div
-                      className="relative inline-block" // Changed to inline-block to respect image dimensions
+                      className="relative inline-block max-w-full"
                       style={{
                         backgroundImage: `url(${productImage})`,
                         backgroundRepeat: "repeat",
@@ -96,8 +96,8 @@ export default function ProductVisualizer({ productImage, productName }: Product
                         ref={setImageRef(mockup.id)}
                         src={mockup.src || "/placeholder.svg"}
                         alt={`${mockup.name} mockup with ${productName}`}
-                        className="block" // Using block to avoid extra space
-                        style={{ maxWidth: "100%" }} // Only constrain width, not height
+                        className="block"
+                        style={{ maxWidth: "100%", height: "auto", maxHeight: "500px" }}
                         onError={(e) => {
                           e.currentTarget.src = "/placeholder.svg"
                         }}
@@ -107,7 +107,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
                 )}
               </div>
 
-              <p className="text-sm text-gray-500 mt-4 text-center">
+              <p className="text-xs text-gray-500 mt-2 text-center">
                 This is a visualization of how {productName} might look in this space.
               </p>
             </div>
