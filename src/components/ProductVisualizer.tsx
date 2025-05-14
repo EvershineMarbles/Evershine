@@ -24,12 +24,12 @@ const MOCKUPS = [
   {
     id: "living-room",
     name: "Living Room",
-    src: "/assets/mockups/living-room.png",
+    src: "/assets/mockups/living-room.jpeg",
   },
   {
     id: "luxury-living",
     name: "Luxury Living",
-    src: "/assets/mockups/luxury-living.jpeg",
+    src: "/assets/mockups/luxury-living.png",
   },
   {
     id: "modern-bedroom",
