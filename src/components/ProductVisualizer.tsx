@@ -53,38 +53,49 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const [mockupsLoaded, setMockupsLoaded] = useState<Record<string, boolean>>({})
   const [allMockupsLoaded, setAllMockupsLoaded] = useState(false)
 
-  // Preload all mockup images as soon as component mounts
+  // Add this at the beginning of the component, after the state declarations
   useEffect(() => {
+    // Preload all mockup images immediately
     const preloadedMockups: Record<string, boolean> = {}
     let loadedCount = 0
 
-    MOCKUPS.forEach((mockup) => {
-      const img = new Image()
-      img.crossOrigin = "anonymous"
-      
-      img.onload = () => {
-        preloadedMockups[mockup.id] = true
-        loadedCount++
-        
-        if (loadedCount === MOCKUPS.length) {
-          setAllMockupsLoaded(true)
-          setMockupsLoaded(preloadedMockups)
+    const preloadImage = (src: string, id: string) => {
+      return new Promise<void>((resolve) => {
+        const img = new Image()
+        img.crossOrigin = "anonymous"
+
+        img.onload = () => {
+          preloadedMockups[id] = true
+          loadedCount++
+          resolve()
         }
-      }
-      
-      img.onerror = () => {
-        preloadedMockups[mockup.id] = false
-        loadedCount++
-        
-        if (loadedCount === MOCKUPS.length) {
-          setAllMockupsLoaded(true)
-          setMockupsLoaded(preloadedMockups)
+
+        img.onerror = () => {
+          preloadedMockups[id] = false
+          loadedCount++
+          resolve()
         }
-      }
-      
-      img.src = mockup.src
+
+        img.src = src
+      })
+    }
+
+    // Start preloading all mockups in parallel
+    Promise.all(MOCKUPS.map((mockup) => preloadImage(mockup.src, mockup.id))).then(() => {
+      console.log("All mockups preloaded successfully")
+      setAllMockupsLoaded(true)
+      setMockupsLoaded(preloadedMockups)
     })
-  }, [])
+
+    // Also preload the product image to start bookmatching process early
+    if (productImage) {
+      const productImg = new Image()
+      productImg.crossOrigin = "anonymous"
+      productImg.src = productImage.startsWith("http")
+        ? `/api/proxy-image?url=${encodeURIComponent(productImage)}`
+        : productImage
+    }
+  }, [productImage])
 
   // Create bookmatched texture as soon as component mounts
   useEffect(() => {
@@ -100,7 +111,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
     return () => clearTimeout(timer)
   }, [])
 
-  // Create a bookmatched texture from the product image
+  // Replace the entire createBookmatchedTexture function with this improved version
   const createBookmatchedTexture = (imageUrl: string) => {
     // If we already created the texture, don't recreate it
     if (bookmatchedTextureRef.current) {
@@ -128,67 +139,43 @@ export default function ProductVisualizer({ productImage, productName }: Product
 
       console.log(`Image dimensions: ${originalWidth}x${originalHeight}, Is square: ${isSquareImage}`)
 
-      // Special handling for square images to avoid visible seam lines
       if (isSquareImage) {
-        // For square images, create a 3x3 grid with the original in the center
-        // and seamlessly blend the edges
-        
-        // Make the canvas 3x the size of the original image
-        const multiplier = 3
-        canvas.width = originalWidth * multiplier
-        canvas.height = originalHeight * multiplier
-        
-        // Calculate center position
-        const centerX = originalWidth
-        const centerY = originalHeight
-        
-        // Draw the original image in the center
-        ctx.drawImage(img, centerX, centerY, originalWidth, originalHeight)
-        
-        // Create a function to draw the image with various transformations
-        const drawTransformed = (x: number, y: number, flipX: boolean, flipY: boolean) => {
-          ctx.save()
-          
-          // Position at the target location
-          ctx.translate(x + (flipX ? originalWidth : 0), y + (flipY ? originalHeight : 0))
-          
-          // Apply scaling (flipping)
-          ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1)
-          
-          // Draw the image
-          ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
-          
-          ctx.restore()
-        }
-        
-        // Draw 8 surrounding copies with appropriate flipping
-        // Top row
-        drawTransformed(0, 0, false, false)                    // Top-left
-        drawTransformed(centerX, 0, false, false)              // Top-center
-        drawTransformed(centerX * 2, 0, true, false)           // Top-right
-        
-        // Middle row
-        drawTransformed(0, centerY, false, false)              // Middle-left
-        drawTransformed(centerX * 2, centerY, true, false)     // Middle-right
-        
-        // Bottom row
-        drawTransformed(0, centerY * 2, false, true)           // Bottom-left
-        drawTransformed(centerX, centerY * 2, false, true)     // Bottom-center
-        drawTransformed(centerX * 2, centerY * 2, true, true)  // Bottom-right
-        
-        // Apply a subtle blur to hide seams
-        ctx.filter = 'blur(0.5px)'
-        ctx.globalAlpha = 0.3
-        ctx.drawImage(canvas, 0, 0)
-        ctx.filter = 'none'
-        ctx.globalAlpha = 1.0
-        
-        // Set background size to ensure the pattern covers well
-        setBackgroundSize(`${originalWidth * 3}px ${originalHeight * 3}px`)
+        // For square images (like 646×646px, 488×488px), use a 2x2 grid with precise mirroring
+        // This creates a perfect bookmatched pattern without blurring
+
+        // Make the canvas 2x the size in each dimension
+        canvas.width = originalWidth * 2
+        canvas.height = originalHeight * 2
+
+        // Draw the original image in the top-left
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+
+        // Draw horizontally flipped copy in top-right
+        ctx.save()
+        ctx.translate(canvas.width, 0)
+        ctx.scale(-1, 1)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+        ctx.restore()
+
+        // Draw vertically flipped copy in bottom-left
+        ctx.save()
+        ctx.translate(0, canvas.height)
+        ctx.scale(1, -1)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+        ctx.restore()
+
+        // Draw both horizontally and vertically flipped copy in bottom-right
+        ctx.save()
+        ctx.translate(canvas.width, canvas.height)
+        ctx.scale(-1, -1)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+        ctx.restore()
+
+        // Set background size to exactly match the 2x2 grid
+        setBackgroundSize(`${originalWidth * 2}px ${originalHeight * 2}px`)
         setBackgroundPosition("center")
       } else {
-        // For non-square images, use the grid approach
-        // Create a 4x4 grid for all images (16 copies total)
+        // For non-square images, use a 4x4 grid approach
         const gridSize = 4
 
         // Set canvas size to accommodate the grid
@@ -234,14 +221,12 @@ export default function ProductVisualizer({ productImage, productName }: Product
         }
 
         // Set background size to ensure full coverage
-        // Use a smaller tile size to create more repetition and better coverage
-        const tileSize = Math.min(originalWidth, originalHeight)
-        setBackgroundSize(`${tileSize}px ${tileSize}px`)
+        setBackgroundSize(`${originalWidth * 2}px ${originalHeight * 2}px`)
         setBackgroundPosition("center")
       }
 
       // Store the bookmatched texture
-      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 0.95) // Higher quality JPEG
+      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg", 1.0) // Use highest quality for JPEG
       setTextureReady(true)
     }
 
