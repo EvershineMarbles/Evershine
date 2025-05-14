@@ -45,10 +45,17 @@ const MOCKUPS = [
 export default function ProductVisualizer({ productImage, productName }: ProductVisualizerProps) {
   const [activeTab, setActiveTab] = useState<string>(MOCKUPS[0].id)
   const [loading, setLoading] = useState(true)
-  const imageRefs = useRef<Record<string, HTMLImageElement | null>>({})
+  const [textureReady, setTextureReady] = useState(false)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const bookmatchedTextureRef = useRef<string | null>(null)
 
+  // Create bookmatched texture as soon as component mounts
   useEffect(() => {
-    // Set a timeout to simulate loading and ensure the DOM is ready
+    createBookmatchedTexture(productImage)
+  }, [productImage])
+
+  // Set a timeout to simulate loading and ensure the DOM is ready
+  useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false)
     }, 1000)
@@ -56,9 +63,77 @@ export default function ProductVisualizer({ productImage, productName }: Product
     return () => clearTimeout(timer)
   }, [])
 
-  // Properly typed ref callback function
-  const setImageRef = (id: string) => (el: HTMLImageElement | null) => {
-    imageRefs.current[id] = el
+  // Create a bookmatched texture from the product image
+  const createBookmatchedTexture = (imageUrl: string) => {
+    // If we already created the texture, don't recreate it
+    if (bookmatchedTextureRef.current) {
+      setTextureReady(true)
+      return
+    }
+
+    // Create an image element to load the texture
+    const img = document.createElement("img")
+    img.crossOrigin = "anonymous"
+
+    img.onload = () => {
+      // Create a canvas to manipulate the image
+      const canvas = document.createElement("canvas")
+      const ctx = canvas.getContext("2d")
+
+      if (!ctx) {
+        console.error("Could not get canvas context")
+        return
+      }
+
+      // Set canvas size to 2x the image size to fit the bookmatched pattern
+      const patternSize = Math.max(img.width, img.height) * 2
+      canvas.width = patternSize
+      canvas.height = patternSize
+
+      // Draw the original image in the top-left quadrant
+      ctx.drawImage(img, 0, 0, img.width, img.height)
+
+      // Draw horizontally flipped image in top-right quadrant
+      ctx.save()
+      ctx.translate(patternSize, 0)
+      ctx.scale(-1, 1)
+      ctx.drawImage(img, 0, 0, img.width, img.height)
+      ctx.restore()
+
+      // Draw vertically flipped image in bottom-left quadrant
+      ctx.save()
+      ctx.translate(0, patternSize)
+      ctx.scale(1, -1)
+      ctx.drawImage(img, 0, 0, img.width, img.height)
+      ctx.restore()
+
+      // Draw both horizontally and vertically flipped image in bottom-right quadrant
+      ctx.save()
+      ctx.translate(patternSize, patternSize)
+      ctx.scale(-1, -1)
+      ctx.drawImage(img, 0, 0, img.width, img.height)
+      ctx.restore()
+
+      // Store the bookmatched texture
+      bookmatchedTextureRef.current = canvas.toDataURL("image/jpeg")
+      setTextureReady(true)
+    }
+
+    img.onerror = () => {
+      console.error("Error loading product image for bookmatching")
+      // Fallback to original image if there's an error
+      bookmatchedTextureRef.current = imageUrl
+      setTextureReady(true)
+    }
+
+    // Handle CORS issues by using a proxy if needed
+    if (imageUrl.startsWith("http")) {
+      // Use proxy for external images
+      img.src = `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`
+    } else {
+      // Use direct path for local images
+      img.src = imageUrl
+    }
   }
 
   return (
@@ -78,7 +153,7 @@ export default function ProductVisualizer({ productImage, productName }: Product
           <TabsContent key={mockup.id} value={mockup.id} className="mt-0">
             <div className="border rounded-lg p-2 bg-gray-50">
               <div className="relative rounded-lg overflow-hidden bg-white border">
-                {loading ? (
+                {loading || !textureReady ? (
                   <div className="flex items-center justify-center h-[200px]">
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#194a95]"></div>
                   </div>
@@ -87,13 +162,12 @@ export default function ProductVisualizer({ productImage, productName }: Product
                     <div
                       className="relative inline-block max-w-full"
                       style={{
-                        backgroundImage: `url(${productImage})`,
+                        backgroundImage: `url(${bookmatchedTextureRef.current || productImage})`,
                         backgroundRepeat: "repeat",
-                        backgroundSize: "200px 200px",
+                        backgroundSize: "400px 400px", // Larger size for the bookmatched pattern
                       }}
                     >
                       <img
-                        ref={setImageRef(mockup.id)}
                         src={mockup.src || "/placeholder.svg"}
                         alt={`${mockup.name} mockup with ${productName}`}
                         className="block"
