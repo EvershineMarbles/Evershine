@@ -110,7 +110,9 @@ export default function ProductVisualizer({ productImage, productName }: Product
     return () => clearTimeout(timer)
   }, [])
 
-  // Create a bookmatched texture from the product image
+  // Replace the createBookmatchedTexture function with this optimized version
+  // that handles 488x488 px images specifically
+
   const createBookmatchedTexture = (imageUrl: string) => {
     // If we already created the texture, don't recreate it
     if (bookmatchedTextureRef.current) {
@@ -134,49 +136,90 @@ export default function ProductVisualizer({ productImage, productName }: Product
 
       const originalWidth = img.width
       const originalHeight = img.height
-      const isSquareImage = Math.abs(originalWidth - originalHeight) < 20 // Consider nearly square images as square
 
-      console.log(`Image dimensions: ${originalWidth}x${originalHeight}, Is square: ${isSquareImage}`)
+      // Log the exact dimensions for debugging
+      console.log(`Image dimensions: ${originalWidth}x${originalHeight}`)
 
-      if (isSquareImage) {
-        // For square images (like 646×646px), use a 4x4 grid with precise mirroring
-        // This creates a more detailed bookmatched pattern without blurring
-        
+      // Check for specific square image sizes that need special handling
+      const isExactSquare488 = originalWidth === 488 && originalHeight === 488
+      const isExactSquare646 = originalWidth === 646 && originalHeight === 646
+      const isNearlySquare = Math.abs(originalWidth - originalHeight) < 20
+
+      // Special handling for 488x488 and 646x646 images
+      if (isExactSquare488 || isExactSquare646) {
+        console.log(`Applying special bookmatching for ${originalWidth}x${originalHeight} image`)
+
+        // For these specific sizes, use a precise 2x2 grid with perfect mirroring
+        // This creates a clean bookmatched pattern with sharp details
+
+        // Make the canvas exactly 2x the size in each dimension
+        canvas.width = originalWidth * 2
+        canvas.height = originalHeight * 2
+
+        // Clear any previous transformations
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+
+        // Top-left: Original image
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+
+        // Top-right: Horizontally flipped
+        ctx.save()
+        ctx.translate(canvas.width, 0)
+        ctx.scale(-1, 1)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+        ctx.restore()
+
+        // Bottom-left: Vertically flipped
+        ctx.save()
+        ctx.translate(0, canvas.height)
+        ctx.scale(1, -1)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+        ctx.restore()
+
+        // Bottom-right: Both horizontally and vertically flipped
+        ctx.save()
+        ctx.translate(canvas.width, canvas.height)
+        ctx.scale(-1, -1)
+        ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+        ctx.restore()
+
+        // Set background size to exactly match the 2x2 grid
+        setBackgroundSize(`${originalWidth * 2}px ${originalHeight * 2}px`)
+        setBackgroundPosition("center")
+      } else if (isNearlySquare) {
+        // For other square images, use a 4x4 grid with precise mirroring
+        // This creates a more detailed bookmatched pattern
+
         // Make the canvas 4x the size in each dimension for more detail
         const multiplier = 4
         canvas.width = originalWidth * multiplier
         canvas.height = originalHeight * multiplier
-        
+
         // Create a pattern of 4x4 tiles with alternating flips
         for (let y = 0; y < multiplier; y++) {
           for (let x = 0; x < multiplier; x++) {
             // Create a more complex pattern with alternating flips
-            // This creates a more natural stone-like appearance
             const flipX = x % 2 === 1
             const flipY = y % 2 === 1
-            
+
             ctx.save()
-            
+
             // Position for this tile
             const posX = x * originalWidth
             const posY = y * originalHeight
-            
+
             // Apply transformations based on position
-            ctx.translate(
-              posX + (flipX ? originalWidth : 0),
-              posY + (flipY ? originalHeight : 0)
-            )
+            ctx.translate(posX + (flipX ? originalWidth : 0), posY + (flipY ? originalHeight : 0))
             ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1)
-            
+
             // Draw the image
             ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
-            
+
             ctx.restore()
           }
         }
-        
+
         // Set background size to create a more detailed pattern
-        // For square images, we want to show more of the pattern
         setBackgroundSize(`${originalWidth * 2}px ${originalHeight * 2}px`)
         setBackgroundPosition("center")
       } else {
@@ -191,7 +234,6 @@ export default function ProductVisualizer({ productImage, productName }: Product
         for (let y = 0; y < gridSize; y++) {
           for (let x = 0; x < gridSize; x++) {
             // For every other position, flip the image horizontally, vertically, or both
-            // to create the bookmatched effect
             const flipHorizontal = x % 2 === 1
             const flipVertical = y % 2 === 1
 
