@@ -53,6 +53,9 @@ export default function ProductVisualizer({ productImage, productName }: Product
   const bookmatchedTextureRef = useRef<string | null>(null)
   const [backgroundSize, setBackgroundSize] = useState("400px 400px") // Default size
   const [backgroundPosition, setBackgroundPosition] = useState("center") // Default position
+  const [debug, setDebug] = useState(false)
+  const [debugMode, setDebugMode] = useState(false)
+  const [imageInfo, setImageInfo] = useState<{ width: number; height: number; aspectRatio: number } | null>(null)
 
   // Create bookmatched texture as soon as component mounts
   useEffect(() => {
@@ -93,95 +96,214 @@ export default function ProductVisualizer({ productImage, productName }: Product
       const originalWidth = img.width
       const originalHeight = img.height
 
-      // Determine if we need to use the enhanced method for small images
-      const isSmallImage = originalWidth < MIN_IMAGE_SIZE || originalHeight < MIN_IMAGE_SIZE
+      // Calculate aspect ratio
+      const aspectRatio = originalWidth / originalHeight
 
-      if (isSmallImage) {
-        // ENHANCED METHOD FOR SMALL IMAGES
-        // Instead of scaling up too much, we'll create a more detailed pattern
-        // with more repetitions but at a smaller scale to maintain quality
+      console.log(`Image dimensions: ${originalWidth}x${originalHeight}, Aspect ratio: ${aspectRatio.toFixed(2)}`)
 
-        // For small images, we'll create a 4x4 grid of bookmatched patterns
-        // This gives us more coverage without excessive scaling
-        const gridSize = 4 // 4x4 grid
+      setImageInfo({
+        width: originalWidth,
+        height: originalHeight,
+        aspectRatio: aspectRatio,
+      })
 
-        // Set canvas size to accommodate the grid
-        canvas.width = originalWidth * gridSize
-        canvas.height = originalHeight * gridSize
+      // Determine the best strategy based on image dimensions and aspect ratio
+      let strategy: "small" | "portrait" | "landscape" | "square"
 
-        // Function to draw a single bookmatched pattern (2x2) at a specific position
-        const drawBookmatchedPattern = (startX: number, startY: number) => {
-          // Original image in top-left
-          ctx.drawImage(img, startX, startY, originalWidth, originalHeight)
+      if (originalWidth < MIN_IMAGE_SIZE || originalHeight < MIN_IMAGE_SIZE) {
+        strategy = "small"
+      } else if (aspectRatio < 0.8) {
+        strategy = "portrait" // Tall images
+      } else if (aspectRatio > 1.5) {
+        strategy = "landscape" // Wide images
+      } else {
+        strategy = "square" // Roughly square images
+      }
 
-          // Horizontally flipped in top-right
+      console.log(`Using strategy: ${strategy}`)
+
+      // Apply different strategies based on image characteristics
+      switch (strategy) {
+        case "small": {
+          // ENHANCED METHOD FOR SMALL IMAGES - Create a dense grid
+          const gridSize = 4 // 4x4 grid
+
+          // Set canvas size to accommodate the grid
+          canvas.width = originalWidth * gridSize
+          canvas.height = originalHeight * gridSize
+
+          // Function to draw a single bookmatched pattern (2x2) at a specific position
+          const drawBookmatchedPattern = (startX: number, startY: number) => {
+            // Original image in top-left
+            ctx.drawImage(img, startX, startY, originalWidth, originalHeight)
+
+            // Horizontally flipped in top-right
+            ctx.save()
+            ctx.translate(startX + originalWidth * 2, startY)
+            ctx.scale(-1, 1)
+            ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+            ctx.restore()
+
+            // Vertically flipped in bottom-left
+            ctx.save()
+            ctx.translate(startX, startY + originalHeight * 2)
+            ctx.scale(1, -1)
+            ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+            ctx.restore()
+
+            // Both horizontally and vertically flipped in bottom-right
+            ctx.save()
+            ctx.translate(startX + originalWidth * 2, startY + originalHeight * 2)
+            ctx.scale(-1, -1)
+            ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+            ctx.restore()
+          }
+
+          // Draw multiple bookmatched patterns in a grid
+          for (let y = 0; y < gridSize; y += 2) {
+            for (let x = 0; x < gridSize; x += 2) {
+              drawBookmatchedPattern(x * originalWidth, y * originalHeight)
+            }
+          }
+
+          // Set a smaller background size to maintain quality
+          const patternSize = Math.min(originalWidth, originalHeight) * 2
+          setBackgroundSize(`${patternSize}px ${patternSize}px`)
+          setBackgroundPosition("center")
+          break
+        }
+
+        case "portrait": {
+          // PORTRAIT STRATEGY - Create a wider pattern for tall images
+          // We'll create a pattern that's 3x wider than tall to ensure good coverage
+          const widthMultiplier = 3
+
+          canvas.width = originalWidth * widthMultiplier * 2
+          canvas.height = originalHeight * 2
+
+          // Draw original image
+          ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+
+          // Draw horizontally flipped images across the top
+          for (let i = 1; i < widthMultiplier; i++) {
+            const flipHorizontal = i % 2 === 1
+            ctx.save()
+            if (flipHorizontal) {
+              ctx.translate(originalWidth * (i + 1), 0)
+              ctx.scale(-1, 1)
+              ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+            } else {
+              ctx.drawImage(img, originalWidth * i, 0, originalWidth, originalHeight)
+            }
+            ctx.restore()
+          }
+
+          // Draw bottom row (vertically flipped)
+          for (let i = 0; i < widthMultiplier; i++) {
+            const flipHorizontal = i % 2 === 1
+            ctx.save()
+            if (flipHorizontal) {
+              ctx.translate(originalWidth * (i + 1), originalHeight * 2)
+              ctx.scale(-1, -1)
+              ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+            } else {
+              ctx.translate(originalWidth * i, originalHeight * 2)
+              ctx.scale(1, -1)
+              ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+            }
+            ctx.restore()
+          }
+
+          // Use a background size that ensures good coverage
+          setBackgroundSize(`${originalWidth * 3}px ${originalHeight * 2}px`)
+          setBackgroundPosition("center")
+          break
+        }
+
+        case "landscape": {
+          // LANDSCAPE STRATEGY - Create a taller pattern for wide images
+          const heightMultiplier = 3
+
+          canvas.width = originalWidth * 2
+          canvas.height = originalHeight * heightMultiplier * 2
+
+          // Draw original image
+          ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+
+          // Draw vertically stacked images on the left
+          for (let i = 1; i < heightMultiplier; i++) {
+            const flipVertical = i % 2 === 1
+            ctx.save()
+            if (flipVertical) {
+              ctx.translate(0, originalHeight * (i + 1))
+              ctx.scale(1, -1)
+              ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+            } else {
+              ctx.drawImage(img, 0, originalHeight * i, originalWidth, originalHeight)
+            }
+            ctx.restore()
+          }
+
+          // Draw right column (horizontally flipped)
+          for (let i = 0; i < heightMultiplier; i++) {
+            const flipVertical = i % 2 === 1
+            ctx.save()
+            if (flipVertical) {
+              ctx.translate(originalWidth * 2, originalHeight * (i + 1))
+              ctx.scale(-1, -1)
+              ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+            } else {
+              ctx.translate(originalWidth * 2, originalHeight * i)
+              ctx.scale(-1, 1)
+              ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+            }
+            ctx.restore()
+          }
+
+          // Use a background size that ensures good coverage
+          setBackgroundSize(`${originalWidth * 2}px ${originalHeight * 3}px`)
+          setBackgroundPosition("center")
+          break
+        }
+
+        case "square": {
+          // SQUARE/BALANCED STRATEGY - Standard bookmatching with dynamic sizing
+          // Set canvas size to 2x the image size to fit the bookmatched pattern
+          const patternSize = Math.max(originalWidth, originalHeight) * 2
+          canvas.width = patternSize
+          canvas.height = patternSize
+
+          // Draw the original image in the top-left quadrant
+          ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
+
+          // Draw horizontally flipped image in top-right quadrant
           ctx.save()
-          ctx.translate(startX + originalWidth * 2, startY)
+          ctx.translate(patternSize, 0)
           ctx.scale(-1, 1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
 
-          // Vertically flipped in bottom-left
+          // Draw vertically flipped image in bottom-left quadrant
           ctx.save()
-          ctx.translate(startX, startY + originalHeight * 2)
+          ctx.translate(0, patternSize)
           ctx.scale(1, -1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
 
-          // Both horizontally and vertically flipped in bottom-right
+          // Draw both horizontally and vertically flipped image in bottom-right quadrant
           ctx.save()
-          ctx.translate(startX + originalWidth * 2, startY + originalHeight * 2)
+          ctx.translate(patternSize, patternSize)
           ctx.scale(-1, -1)
           ctx.drawImage(img, 0, 0, originalWidth, originalHeight)
           ctx.restore()
+
+          // Calculate optimal background size based on image dimensions
+          // For square-ish images, we want to ensure the pattern is large enough
+          const optimalSize = Math.max(originalWidth, originalHeight) * 1.5
+          setBackgroundSize(`${optimalSize}px ${optimalSize}px`)
+          setBackgroundPosition("center")
+          break
         }
-
-        // Draw multiple bookmatched patterns in a grid
-        for (let y = 0; y < gridSize; y += 2) {
-          for (let x = 0; x < gridSize; x += 2) {
-            drawBookmatchedPattern(x * originalWidth, y * originalHeight)
-          }
-        }
-
-        // Set a smaller background size to maintain quality
-        // We'll use a tiling approach rather than scaling
-        const patternSize = Math.min(originalWidth, originalHeight) * 2
-        setBackgroundSize(`${patternSize}px ${patternSize}px`)
-        setBackgroundPosition("center")
-      } else {
-        // ORIGINAL METHOD FOR ADEQUATELY SIZED IMAGES
-        // Set canvas size to 2x the image size to fit the bookmatched pattern
-        const patternSize = Math.max(img.width, img.height) * 2
-        canvas.width = patternSize
-        canvas.height = patternSize
-
-        // Draw the original image in the top-left quadrant
-        ctx.drawImage(img, 0, 0, img.width, img.height)
-
-        // Draw horizontally flipped image in top-right quadrant
-        ctx.save()
-        ctx.translate(patternSize, 0)
-        ctx.scale(-1, 1)
-        ctx.drawImage(img, 0, 0, img.width, img.height)
-        ctx.restore()
-
-        // Draw vertically flipped image in bottom-left quadrant
-        ctx.save()
-        ctx.translate(0, patternSize)
-        ctx.scale(1, -1)
-        ctx.drawImage(img, 0, 0, img.width, img.height)
-        ctx.restore()
-
-        // Draw both horizontally and vertically flipped image in bottom-right quadrant
-        ctx.save()
-        ctx.translate(patternSize, patternSize)
-        ctx.scale(-1, -1)
-        ctx.drawImage(img, 0, 0, img.width, img.height)
-        ctx.restore()
-
-        // Use the original background size for larger images
-        setBackgroundSize("400px 400px")
-        setBackgroundPosition("center")
       }
 
       // Store the bookmatched texture
@@ -206,9 +328,37 @@ export default function ProductVisualizer({ productImage, productName }: Product
     }
   }
 
+  const toggleDebugMode = () => {
+    setDebugMode(!debugMode)
+  }
+
   return (
     <div className="w-full max-w-3xl mx-auto">
-      <h2 className="text-xl font-bold mb-4">Product Visualizer</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Product Visualizer</h2>
+        {process.env.NODE_ENV === "development" && (
+          <button onClick={toggleDebugMode} className="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded">
+            {debugMode ? "Hide Debug" : "Show Debug"}
+          </button>
+        )}
+      </div>
+
+      {debugMode && imageInfo && (
+        <div className="mb-4 p-3 bg-gray-100 rounded text-xs">
+          <p>
+            <strong>Image Dimensions:</strong> {imageInfo.width}×{imageInfo.height}px
+          </p>
+          <p>
+            <strong>Aspect Ratio:</strong> {imageInfo.aspectRatio.toFixed(2)}
+          </p>
+          <p>
+            <strong>Background Size:</strong> {backgroundSize}
+          </p>
+          <p>
+            <strong>Background Position:</strong> {backgroundPosition}
+          </p>
+        </div>
+      )}
 
       <Tabs defaultValue={MOCKUPS[0].id} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-4">
